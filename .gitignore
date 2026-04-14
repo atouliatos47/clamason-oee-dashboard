@@ -3,3 +3,4 @@ node_modules/
 uploads/
 *.xls
 *.xlsx
+node-v24.14.0-win-x64/ 
