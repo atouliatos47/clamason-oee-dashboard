@@ -107,6 +107,49 @@ function parseSFC(buffer) {
   return machines;
 }
 
+// ── Parse Agility Breakdown Summary XLSX ─────────────────────────────────────
+// Handles the AG3-007 Equipment Breakdown Summary export format:
+//   Row with 'Code','Description','Site','Location','','Jobs',...,'Downtime Hours'
+//   Then one 'Actual' row + one 'Average' row per machine
+function parseAgilityBreakdownSummary(buffer) {
+  const wb  = XLSX.read(buffer, { type: 'buffer' });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+  const machines = [];
+  let headerFound = false;
+
+  for (const row of raw) {
+    const c0 = row[0] != null ? String(row[0]).trim() : '';
+    const c1 = row[1] != null ? String(row[1]).replace(/\n/g, ' ').trim() : '';
+    const c4 = row[4] != null ? String(row[4]).trim() : '';
+
+    // Find the header row
+    if (!headerFound && c0 === 'Code') { headerFound = true; continue; }
+    if (!headerFound) continue;
+
+    // Only process 'Actual' rows that have a machine code
+    if (c4 !== 'Actual' || !/^\d{4,}$/.test(c0)) continue;
+
+    const numJobs    = parseInt(row[5])   || 0;
+    const downtimeHr = Math.round((parseFloat(row[10]) || 0) * 10) / 10;
+
+    machines.push({
+      code:            c0,
+      name:            c1.replace(/\s+/g, ' '),
+      cost_labour:     0,
+      labour_hrs:      0,
+      num_jobs:        numJobs,
+      downtime_hrs:    downtimeHr,
+      tpm_count:       0,
+      breakdown_count: numJobs,
+      breakdowns:      [],
+    });
+  }
+
+  return machines.filter(m => m.num_jobs > 0);
+}
+
 // ── Parse Agility XLSX ────────────────────────────────────────────────────────
 function parseAgility(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer' });
@@ -228,7 +271,14 @@ router.post('/agility', upload.single('file'), async (req, res) => {
     const periodLabel = req.body.period_label;
     if (!periodLabel) return res.status(400).json({ error: 'period_label is required' });
 
-    const machines = parseAgility(req.file.buffer);
+    // Auto-detect format: Breakdown Summary (Sheet1 only) vs detailed job export (Sheet2)
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const isBreakdownSummary = !wb.SheetNames.includes('Sheet2') &&
+      wb.SheetNames.length === 1;
+
+    const machines = isBreakdownSummary
+      ? parseAgilityBreakdownSummary(req.file.buffer)
+      : parseAgility(req.file.buffer);
     if (!machines.length) return res.status(400).json({ error: 'No machine data found in file' });
 
     const client = await pool.connect();
