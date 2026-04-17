@@ -27,7 +27,7 @@ function renderDashboard() {
     document.getElementById('kpiGrid').innerHTML = `
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Avg OEE</div>
-            <div class="kpi-value" style="color:${oeeColor(avgOEE)}">${fmt1(avgOEE)}%</div>
+            <div class="kpi-value" style="color:${avgOEE >= state.wcTarget ? '#27ae60' : avgOEE >= state.wcTarget * 0.95 ? '#e67e22' : '#c0392b'}">${fmt1(avgOEE)}%</div>
             <div class="kpi-sub">active machines · target ${state.wcTarget}%</div>
         </div>
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('oee')">

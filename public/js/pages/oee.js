@@ -34,7 +34,7 @@ function renderOEEKPIs() {
     grid.innerHTML = `
         <div class="kpi-card">
             <div class="kpi-label">Fleet Avg OEE</div>
-            <div class="kpi-value" style="color:${oeeColor(avgOEE)}">${fmt1(avgOEE)}%</div>
+            <div class="kpi-value" style="color:${avgOEE >= state.wcTarget ? '#27ae60' : avgOEE >= state.wcTarget * 0.95 ? '#e67e22' : '#c0392b'}">${fmt1(avgOEE)}%</div>
             <div class="kpi-sub">active machines · ${wk || '—'}</div>
         </div>
         <div class="kpi-card">
