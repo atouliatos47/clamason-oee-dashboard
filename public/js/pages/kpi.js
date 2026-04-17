@@ -31,7 +31,7 @@ function editableTarget(key, value, unit) {
     return `<span 
         contenteditable="true" 
         onblur="updateTarget('${key}', this.innerText)"
-        style="cursor:text;border-bottom:1px dashed #95C11F;padding:0 2px;color:#243547;font-weight:700;"
+        style="cursor:text;border-bottom:2px dashed #95C11F;padding:0 4px;color:#243547;font-weight:700;font-size:18px;"
         title="Click to edit target"
     >${value}${unit}</span>`;
 }
@@ -98,8 +98,8 @@ function renderKPIBoard() {
             ? (row.actual - t.value).toFixed(1)
             : (t.value - row.actual).toFixed(1);
         const gapText = +gap >= 0
-            ? `<span style="color:#27ae60">+${gap}${row.unit}</span>`
-            : `<span style="color:#c0392b">${gap}${row.unit}</span>`;
+            ? `<span style="color:#27ae60;font-size:18px;font-weight:700;">+${gap}${row.unit}</span>`
+            : `<span style="color:#c0392b;font-size:18px;font-weight:700;">${gap}${row.unit}</span>`;
 
         return `<tr style="background:${tl.bg};">
             <td style="padding:12px 16px;font-weight:700;color:#243547;width:200px;">${row.label}</td>
