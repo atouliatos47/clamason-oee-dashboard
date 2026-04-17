@@ -1,12 +1,12 @@
 // kpi.js - Maintenance KPI Board for board meetings
 
 const DEFAULT_TARGETS = {
-    avail:       { value: 75,   label: 'Availability',         unit: '%' },
-    maxDowntime: { value: 3000, label: 'Max Annual Downtime',  unit: 'h' },
-    maxBDs:      { value: 200,  label: 'Max Breakdowns',       unit: ''  },
-    maxMTTR:     { value: 4,    label: 'Max MTTR',             unit: 'h' },
-    minMTBF:     { value: 200,  label: 'Min MTBF',             unit: 'h' },
-    tpmTarget:   { value: 12,   label: 'TPM Visits per Asset', unit: ''  },
+    avail: { value: 75, label: 'Availability', unit: '%' },
+    maxDowntime: { value: 3000, label: 'Max Annual Downtime', unit: 'h' },
+    maxBDs: { value: 200, label: 'Max Breakdowns', unit: '' },
+    maxMTTR: { value: 4, label: 'Max MTTR', unit: 'h' },
+    minMTBF: { value: 200, label: 'Min MTBF', unit: 'h' },
+    tpmTarget: { value: 12, label: 'TPM Visits per Asset', unit: '' },
 };
 
 function getTargets() {
@@ -22,9 +22,9 @@ function saveTarget(key, value) {
 
 function trafficLight(actual, target, higherIsBetter = true) {
     const pct = higherIsBetter ? actual / target : target / actual;
-    if (pct >= 1)    return { color: '#27ae60', icon: '🟢', label: 'On Target',   bg: '#f0faf4' };
+    if (pct >= 1) return { color: '#27ae60', icon: '🟢', label: 'On Target', bg: '#f0faf4' };
     if (pct >= 0.95) return { color: '#e67e22', icon: '🟡', label: 'Near Target', bg: '#fffbf0' };
-    return           { color: '#c0392b', icon: '🔴', label: 'Below Target', bg: '#fff5f5' };
+    return { color: '#c0392b', icon: '🔴', label: 'Below Target', bg: '#fff5f5' };
 }
 
 function editableTarget(key, value, unit) {
@@ -46,7 +46,7 @@ function updateTarget(key, rawVal) {
 }
 
 function kpiRow(row, targets) {
-    const t  = targets[row.key];
+    const t = targets[row.key];
     const tl = trafficLight(row.actual, t.value, row.higher);
     const gap = row.higher
         ? (row.actual - t.value).toFixed(1)
@@ -68,52 +68,52 @@ function renderKPIBoard() {
     if (!el) return;
 
     const targets = getTargets();
-    const wk      = state.currentWeek;
-    const data    = wk ? (state.oeeData[wk] || []) : [];
-    const active  = data.filter(d => +d.oee > 0);
-    const maint   = state.maintData || [];
-    const period  = maint[0]?.period_label || 'Annual';
+    const wk = state.currentWeek;
+    const data = wk ? (state.oeeData[wk] || []) : [];
+    const active = data.filter(d => +d.oee > 0);
+    const maint = state.maintData || [];
+    const period = maint[0]?.period_label || 'Annual';
 
     // ── Production data (context only) ──
-    const avgOEE   = active.length ? active.reduce((s,d)=>s+(+d.oee),0)/active.length  : 0;
-    const avgAvail = active.length ? active.reduce((s,d)=>s+(+d.avail),0)/active.length : 0;
-    const avgPerf  = active.length ? active.reduce((s,d)=>s+(+d.perf),0)/active.length  : 0;
-    const avgQual  = active.length ? active.reduce((s,d)=>s+(+d.quality),0)/active.length : 0;
-    const totalUnpl = data.reduce((s,d)=>s+(+d.unplanned_h),0);
+    const avgOEE = active.length ? active.reduce((s, d) => s + (+d.oee), 0) / active.length : 0;
+    const avgAvail = active.length ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
+    const avgPerf = active.length ? active.reduce((s, d) => s + (+d.perf), 0) / active.length : 0;
+    const avgQual = active.length ? active.reduce((s, d) => s + (+d.quality), 0) / active.length : 0;
+    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
 
     // OEE impact calculation
     // If Availability hits target, what would OEE be?
-    const projectedOEE = (targets.avail.value/100) * (avgPerf/100) * (avgQual/100) * 100;
+    const projectedOEE = (targets.avail.value / 100) * (avgPerf / 100) * (avgQual / 100) * 100;
 
     // ── Maintenance data ──
-    const totalDT  = maint.reduce((s,m)=>s+(+m.downtime_hrs),0);
-    const totalBDs = maint.reduce((s,m)=>s+(+m.breakdown_count),0);
-    const totalTPM = maint.reduce((s,m)=>s+(+m.tpm_count),0);
-    const totalRunH = state.weeks.reduce((s,w)=>
-        s+(state.oeeData[w]||[]).reduce((ss,d)=>ss+(+d.run_h||0),0),0);
+    const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
+    const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
+    const totalTPM = maint.reduce((s, m) => s + (+m.tpm_count), 0);
+    const totalRunH = state.weeks.reduce((s, w) =>
+        s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
 
-    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT/totalBDs)*10)/10 : 0;
+    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
     const fleetMTBF = totalBDs > 0 && totalRunH > 0
-        ? Math.round((totalRunH/totalBDs)*10)/10 : 0;
-    const avgTPM = maint.length > 0 ? Math.round((totalTPM/maint.length)*10)/10 : 0;
+        ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
+    const avgTPM = maint.length > 0 ? Math.round((totalTPM / maint.length) * 10) / 10 : 0;
 
     // Best/worst availability from SFC
-    const bestAvail  = [...active].sort((a,b)=>+b.avail - +a.avail)[0];
-    const worstAvail = [...active].sort((a,b)=>+a.avail - +b.avail)[0];
+    const bestAvail = [...active].sort((a, b) => +b.avail - +a.avail)[0];
+    const worstAvail = [...active].sort((a, b) => +a.avail - +b.avail)[0];
 
     // Worst asset by downtime
-    const top5 = [...maint].filter(m=>+m.downtime_hrs>0)
-        .sort((a,b)=>+b.downtime_hrs - +a.downtime_hrs).slice(0,5);
+    const top5 = [...maint].filter(m => +m.downtime_hrs > 0)
+        .sort((a, b) => +b.downtime_hrs - +a.downtime_hrs).slice(0, 5);
 
     // Availability trend
     const availTrend = state.weeks.map(w => {
-        const wd = (state.oeeData[w]||[]).filter(d=>+d.avail>0);
-        return { week:w, avg: wd.length ? wd.reduce((s,d)=>s+(+d.avail),0)/wd.length : 0 };
+        const wd = (state.oeeData[w] || []).filter(d => +d.avail > 0);
+        return { week: w, avg: wd.length ? wd.reduce((s, d) => s + (+d.avail), 0) / wd.length : 0 };
     });
-    const weeksOnTarget = availTrend.filter(w=>w.avg>=targets.avail.value).length;
+    const weeksOnTarget = availTrend.filter(w => w.avg >= targets.avail.value).length;
 
     const sparkline = availTrend.map(w => {
-        const h  = Math.max((w.avg/100)*50,2);
+        const h = Math.max((w.avg / 100) * 50, 2);
         const tl = trafficLight(w.avg, targets.avail.value);
         return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
             <div style="font-size:9px;color:#888">${fmt1(w.avg)}%</div>
@@ -124,12 +124,12 @@ function renderKPIBoard() {
 
     // Maintenance KPI rows
     const maintRows = [
-        { key:'avail',       label:'Availability %',     actual:avgAvail,         unit:'%', higher:true  },
-        { key:'maxMTTR',     label:'Fleet MTTR',          actual:fleetMTTR,        unit:'h', higher:false },
-        { key:'minMTBF',     label:'Fleet MTBF',          actual:fleetMTBF,        unit:'h', higher:true  },
-        { key:'maxDowntime', label:'Annual Downtime',     actual:Math.round(totalDT), unit:'h', higher:false },
-        { key:'maxBDs',      label:'Total Breakdowns',    actual:totalBDs,         unit:'',  higher:false },
-        { key:'tpmTarget',   label:'Avg TPM per Asset',   actual:avgTPM,           unit:'',  higher:true  },
+        { key: 'avail', label: 'Availability %', actual: avgAvail, unit: '%', higher: true },
+        { key: 'maxMTTR', label: 'Fleet MTTR', actual: fleetMTTR, unit: 'h', higher: false },
+        { key: 'minMTBF', label: 'Fleet MTBF', actual: fleetMTBF, unit: 'h', higher: true },
+        { key: 'maxDowntime', label: 'Annual Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
+        { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
+        { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },
     ];
 
     const tlAvail = trafficLight(avgAvail, targets.avail.value);
@@ -142,7 +142,7 @@ function renderKPIBoard() {
                 <div>
                     <h2 style="color:#243547;font-size:24px;margin:0;">Maintenance KPI Board</h2>
                     <div style="color:#888;font-size:13px;margin-top:4px;">
-                        Week: <strong>${wk||'—'}</strong> &nbsp;·&nbsp;
+                        Week: <strong>${wk || '—'}</strong> &nbsp;·&nbsp;
                         Maintenance Period: <strong>${period}</strong> &nbsp;·&nbsp;
                         <span style="color:#95C11F;font-size:12px;">✎ Click any target to edit</span>
                     </div>
@@ -159,7 +159,7 @@ function renderKPIBoard() {
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
                 <div>
                     <div style="font-size:11px;color:#888;margin-bottom:2px;">Overall OEE</div>
-                    <div style="font-size:22px;font-weight:700;color:${avgOEE>=targets.avail.value?'#27ae60':'#c0392b'}">${fmt1(avgOEE)}%</div>
+                    <div style="font-size:22px;font-weight:700;color:${avgOEE >= targets.avail.value ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
                     <div style="font-size:11px;color:#888;">target ${targets.avail.value}%</div>
                 </div>
                 <div>
@@ -188,7 +188,7 @@ function renderKPIBoard() {
             <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
                 <div>
                     <div style="font-size:48px;font-weight:700;color:${tlAvail.color};line-height:1;">${fmt1(avgAvail)}%</div>
-                    <div style="font-size:14px;color:#888;margin-top:4px;">Current Availability · Week ${wk||'—'}</div>
+                    <div style="font-size:14px;color:#888;margin-top:4px;">Current Availability · Week ${wk || '—'}</div>
                 </div>
                 <div style="width:1px;height:70px;background:#ddd;"></div>
                 <div>
@@ -203,12 +203,12 @@ function renderKPIBoard() {
                     </div>
                 </div>
                 <div style="width:1px;height:70px;background:#ddd;"></div>
-                <div style="background:#fff;border-radius:8px;padding:12px 16px;max-width:280px;">
-                    <div style="font-size:11px;font-weight:700;color:#243547;margin-bottom:6px;">💡 OEE Impact</div>
-                    <div style="font-size:13px;color:#555;">
-                        If Availability reaches <strong>${targets.avail.value}%</strong> target,<br>
-                        OEE would improve from <strong style="color:#c0392b">${fmt1(avgOEE)}%</strong> 
-                        to approximately <strong style="color:#27ae60">${fmt1(projectedOEE)}%</strong>
+                <div style="background:#fff;border-radius:10px;padding:18px 22px;max-width:340px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                    <div style="font-size:14px;font-weight:700;color:#243547;margin-bottom:10px;">💡 OEE Impact</div>
+                    <div style="font-size:16px;color:#555;line-height:1.6;">
+                        If Availability reaches <strong style="font-size:18px;">${targets.avail.value}%</strong> target,<br>
+                        OEE would improve from <strong style="font-size:18px;color:#c0392b">${fmt1(avgOEE)}%</strong> 
+                        to approximately <strong style="font-size:20px;color:#27ae60">${fmt1(projectedOEE)}%</strong>
                     </div>
                 </div>
             </div>
@@ -256,13 +256,13 @@ function renderKPIBoard() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
             <div style="background:#f0faf4;border-radius:10px;padding:14px 18px;border-left:4px solid #27ae60;">
                 <div style="font-size:11px;font-weight:700;color:#155724;text-transform:uppercase;margin-bottom:6px;">🏆 Best Availability This Week</div>
-                <div style="font-size:18px;font-weight:700;color:#155724;">${bestAvail?.machine||'—'}</div>
-                <div style="font-size:13px;color:#155724;">${fmt1(bestAvail?.avail||0)}% availability</div>
+                <div style="font-size:18px;font-weight:700;color:#155724;">${bestAvail?.machine || '—'}</div>
+                <div style="font-size:13px;color:#155724;">${fmt1(bestAvail?.avail || 0)}% availability</div>
             </div>
             <div style="background:#fff5f5;border-radius:10px;padding:14px 18px;border-left:4px solid #c0392b;">
                 <div style="font-size:11px;font-weight:700;color:#721c24;text-transform:uppercase;margin-bottom:6px;">⚠️ Lowest Availability</div>
-                <div style="font-size:18px;font-weight:700;color:#721c24;">${worstAvail?.machine||'—'}</div>
-                <div style="font-size:13px;color:#721c24;">${fmt1(worstAvail?.avail||0)}% availability</div>
+                <div style="font-size:18px;font-weight:700;color:#721c24;">${worstAvail?.machine || '—'}</div>
+                <div style="font-size:13px;color:#721c24;">${fmt1(worstAvail?.avail || 0)}% availability</div>
             </div>
         </div>
 
@@ -272,13 +272,13 @@ function renderKPIBoard() {
                 <span class="card-title">🔴 Top 5 Assets by Annual Downtime</span>
                 <span class="card-sub">focus maintenance effort here</span>
             </div>
-            ${top5.map((m,i) => {
-                const assetMTTR = +m.breakdown_count > 0
-                    ? Math.round((+m.downtime_hrs / +m.breakdown_count)*10)/10 : 0;
-                const mttrCol = assetMTTR<=4?'#27ae60':assetMTTR<=8?'#e67e22':'#c0392b';
-                return `
+            ${top5.map((m, i) => {
+        const assetMTTR = +m.breakdown_count > 0
+            ? Math.round((+m.downtime_hrs / +m.breakdown_count) * 10) / 10 : 0;
+        const mttrCol = assetMTTR <= 4 ? '#27ae60' : assetMTTR <= 8 ? '#e67e22' : '#c0392b';
+        return `
                 <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f0f0f0;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:${i===0?'#c0392b':i===1?'#e67e22':i===2?'#e6b800':'#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${i+1}</div>
+                    <div style="width:28px;height:28px;border-radius:50%;background:${i === 0 ? '#c0392b' : i === 1 ? '#e67e22' : i === 2 ? '#e6b800' : '#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${i + 1}</div>
                     <div style="flex:1;font-size:14px;font-weight:700;color:#243547;">${m.name}</div>
                     <div style="text-align:center;min-width:80px;">
                         <div style="font-size:14px;color:#c0392b;font-weight:700;">${Math.round(+m.downtime_hrs)}h</div>
@@ -297,6 +297,6 @@ function renderKPIBoard() {
                         <div style="font-size:10px;color:#888;">TPM visits</div>
                     </div>
                 </div>`;
-            }).join('')}
+    }).join('')}
         </div>`;
 }
