@@ -34,6 +34,9 @@
       <a class="nav-item" onclick="showPage('maintenance')" href="#">
         <span class="nav-icon">🔧</span>Maintenance
       </a>
+      <a class="nav-item" onclick="showPage('kpi')" href="#">
+        <span class="nav-icon">🎯</span>KPI Board
+      </a>
       <a class="nav-item" onclick="showPage('upload')" href="#">
         <span class="nav-icon">📥</span>Upload
       </a>
@@ -185,6 +188,11 @@
     <div id="page-detail" class="page">
       <button class="back-btn" onclick="goBack()">← Back</button>
       <div id="detailContent"></div>
+    </div>
+
+    <!-- ═══ PAGE: KPI BOARD ═══ -->
+    <div id="page-kpi" class="page">
+      <div id="kpiBoard"></div>
     </div>
 
     <!-- ═══ PAGE: UPLOAD ═══ -->
