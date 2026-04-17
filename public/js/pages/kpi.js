@@ -132,7 +132,7 @@ function renderKPIBoard() {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
             <div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <img src="/icons/logo.png" style="height:40px;">
+                    <img src="/icons/Clamason-Logo-Side-PNG.png" style="height:65px;">
                     <h2 style="color:#243547;font-size:22px;margin:0;">KPI Board</h2>
                 </div>
                 <div style="color:#888;font-size:13px;margin-top:4px;">
