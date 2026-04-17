@@ -1,6 +1,15 @@
 // app.js - Main application router and initialization
 
 function showPage(page, param = null) {
+    // Track previous page for back button
+    const currentActive = document.querySelector('.page.active');
+    if (currentActive) {
+        const currentId = currentActive.id.replace('page-', '');
+        if (currentId !== page && currentId !== 'detail') {
+            state.prevPage = currentId;
+        }
+    }
+
     // Update nav active state
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const activeNav = document.querySelector(`.nav-item[onclick*="'${page}'"]`);
@@ -30,7 +39,7 @@ function showPage(page, param = null) {
 }
 
 function goBack() {
-    showPage('maintenance');
+    showPage(state.prevPage || 'dashboard');
 }
 
 async function init() {
