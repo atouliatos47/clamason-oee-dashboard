@@ -7,6 +7,8 @@ const DEFAULT_TARGETS = {
     quality: { value: 99, label: 'Quality', unit: '%' },
     maxDowntime: { value: 3000, label: 'Max Annual Downtime', unit: 'h' },
     maxBDs: { value: 200, label: 'Max Breakdowns', unit: '' },
+    maxMTTR: { value: 4, label: 'Max MTTR', unit: 'h' },
+    minMTBF: { value: 200, label: 'Min MTBF', unit: 'h' },
 };
 
 function getTargets() {
@@ -70,6 +72,15 @@ function renderKPIBoard() {
     // Actuals — Maintenance
     const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
     const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
+
+    // MTTR = Total Downtime / Total Breakdowns
+    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
+
+    // MTBF = Total SFC Run Hours / Total Breakdowns
+    const totalRunH = state.weeks.reduce((s, w) =>
+        s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
+    const fleetMTBF = totalBDs > 0 && totalRunH > 0
+        ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
     const worstMachine = [...maint].sort((a, b) => +b.downtime_hrs - +a.downtime_hrs)[0];
 
     // OEE trend
@@ -91,6 +102,8 @@ function renderKPIBoard() {
     const maintRows = [
         { key: 'maxDowntime', label: 'Annual Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
+        { key: 'maxMTTR', label: 'Fleet MTTR', actual: fleetMTTR, unit: 'h', higher: false },
+        { key: 'minMTBF', label: 'Fleet MTBF', actual: fleetMTBF, unit: 'h', higher: true },
     ];
 
     function kpiRow(row) {
