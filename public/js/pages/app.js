@@ -9,7 +9,7 @@ function showPage(page, param = null) {
     // Hide all pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
 
-    // Show selected page  ← was page+'Page', must be 'page-'+page
+    // Show selected page
     const target = document.getElementById('page-' + page);
     if (target) target.classList.add('active');
 
@@ -24,6 +24,8 @@ function showPage(page, param = null) {
         renderDetail(param);
         const detailPage = document.getElementById('page-detail');
         if (detailPage) detailPage.classList.add('active');
+    } else if (page === 'kpi') {
+        renderKPIBoard();
     }
 }
 
