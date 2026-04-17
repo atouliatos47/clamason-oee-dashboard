@@ -74,8 +74,13 @@ function exportKPIPDF() {
 
 <div class="header">
   <div>
-    <div class="title">🎯 Clamason KPI Board</div>
-    <div class="sub">Production Week: <strong>${wk || '—'}</strong> &nbsp;·&nbsp; Maintenance Period: <strong>${period}</strong></div>
+<div style="display:flex;align-items:center;gap:14px;">
+    <img src="https://clamason-oee-dashboard.onrender.com/icons/Clamason-Logo-Side-PNG.png" style="height:65px;">
+    <div>
+        <div class="title">KPI Board</div>
+        <div class="sub">Production Week: <strong>${wk || '—'}</strong> &nbsp;·&nbsp; Maintenance Period: <strong>${period}</strong></div>
+    </div>
+</div>
   </div>
   <div style="text-align:right;">
     <div style="font-size:11px;color:#888;">Generated</div>
