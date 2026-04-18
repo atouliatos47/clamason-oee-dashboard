@@ -29,8 +29,8 @@ function drawSemiGauge(value, target, label, W, H) {
 
     return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
         <path d="${bg}" fill="none" stroke="#ebebeb" stroke-width="11" stroke-linecap="butt"/>
-        ${arc ? `<path d="${arc}" ` : ''}
-        <line x1="${tox}" y1="${toy}" x2="${tix}" y2="${tiy}" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>
+        ${arc ? `<path d="${arc}" fill="none" stroke="${col}" stroke-width="11" stroke-linecap="butt"/>` : ''}
+        <line x1="${tox}" y1="${toy}" x2="${tix}" y2="${tiy}" stroke="#c0392b" stroke-width="2.5" stroke-linecap="butt"/>
         <text x="${cx}" y="${cy - 5}" text-anchor="middle" font-size="15" font-weight="800" fill="${col}">${Math.round(pct)}%</text>
         <text x="${cx}" y="${H - 2}" text-anchor="middle" font-size="9" fill="#aaa" letter-spacing="0.3">${label}</text>
     </svg>`;
@@ -64,9 +64,9 @@ function renderFleetDonut(oee, avail, target) {
     return `
     <div style="text-align:center">
         <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto">
-            <path d="${bg}" fill="none" stroke="#ebebeb" stroke-width="14" stroke-linecap="round"/>
-            ${arc ? `<path d="${arc}" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round"/>` : ''}
-            <line x1="${tox}" y1="${toy}" x2="${tix}" y2="${tiy}" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+            <path d="${bg}" fill="none" stroke="#ebebeb" stroke-width="14" stroke-linecap="butt"/>
+            ${arc ? `<path d="${arc}" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="butt"/>` : ''}
+            <line x1="${tox}" y1="${toy}" x2="${tix}" y2="${tiy}" stroke="#c0392b" stroke-width="3" stroke-linecap="butt"/>
             <text x="${cx}" y="${cy - 28}" text-anchor="middle" font-size="30" font-weight="800" fill="${col}">${fmt1(oee)}%</text>
             <text x="${cx}" y="${cy - 10}" text-anchor="middle" font-size="11" fill="#888">Fleet OEE</text>
             <text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="10" fill="#aaa">Avail: <tspan fill="${ac}" font-weight="700">${fmt1(avail)}%</tspan></text>
@@ -107,7 +107,7 @@ function renderTrendSVG(weeks, target) {
             else { if (seg.length>1) segs.push(seg); seg=[]; }
         });
         if (seg.length>1) segs.push(seg);
-        let out = segs.map(s => `<polyline points="${s.join(' ')}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${dash}" stroke-linejoin="round" stroke-linecap="round"/>`).join('');
+        let out = segs.map(s => `<polyline points="${s.join(' ')}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${dash}" stroke-linejoin="round" stroke-linecap="butt"/>`).join('');
         pts.forEach((p, i) => { if(p) out += `<circle cx="${xOf(i).toFixed(1)}" cy="${yOf(p[key]).toFixed(1)}" r="3" fill="${col}" stroke="#fff" stroke-width="1.5"/>`; });
         return out;
     }
@@ -217,7 +217,7 @@ function renderOEEVisuals() {
     if (!el) return;
     const wk     = state.currentWeek;
     const data   = wk ? (state.oeeData[wk] || []) : [];
-    const target = state.wcTarget || 65;fill="none" stroke="${col}" stroke-width="11" stroke-linecap="butt"/>
+    const target = state.wcTarget || 65;
     const active = data.filter(d => +d.net_avail_h > 0);
     const avgAvail = active.length ? active.reduce((s,d)=>s+ +d.avail,0)/active.length : 0;
     const avgOEE   = active.length ? active.reduce((s,d)=>s+ +d.oee,0)/active.length : 0;
