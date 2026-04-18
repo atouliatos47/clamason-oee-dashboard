@@ -153,7 +153,10 @@ async function loadMachineMapping() {
     if (!el) return;
     el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Loading...</td></tr>';
     try {
-        const res = await fetch('/api/upload/machine-mapping');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('/api/upload/machine-mapping', { signal: controller.signal });
+        clearTimeout(timeout);
         const data = await res.json();
         state.machineMapping = data.mappings;
 

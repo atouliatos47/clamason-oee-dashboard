@@ -210,6 +210,15 @@ router.get('/machine-mapping', async (req, res) => {
   try {
     const client = await pool.connect();
     try {
+      // Create table if it doesn't exist yet
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS machine_mapping (
+          id           SERIAL PRIMARY KEY,
+          agility_name VARCHAR(150) NOT NULL UNIQUE,
+          sfc_name     VARCHAR(100),
+          updated_at   TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
       const [mappings, agility, sfc] = await Promise.all([
         client.query(`SELECT agility_name, sfc_name FROM machine_mapping ORDER BY agility_name`),
         client.query(`SELECT DISTINCT name AS agility_name FROM agility_data ORDER BY name`),
@@ -222,6 +231,7 @@ router.get('/machine-mapping', async (req, res) => {
       });
     } finally { client.release(); }
   } catch (err) {
+    console.error('machine-mapping GET error:', err);
     res.status(500).json({ error: err.message });
   }
 });
