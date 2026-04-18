@@ -468,23 +468,12 @@ function sparkBars(history) {
     const bars = history.map(h => {
         const v = +h.oee || 0;
         const col = oeeColor(v);
+        const barH = Math.max((v / 100) * 60, v > 0 ? 4 : 2);
         return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
             <div style="font-size:10px;color:#888">${fmt1(v)}%</div>
-            <div style="flex:1;width:100%;background:${v > 0 ? col : '#eee'};border-radius:3px 3px 0 0;min-height:4px;max-height:60px;height:${Math.max((v / 100) * 60, 4)}px"></div>
+            <div style="width:100%;height:${barH}px;background:${v > 0 ? col : '#eee'};border-radius:3px 3px 0 0;"></div>
             <div style="font-size:10px;color:#888">${h.week}</div>
         </div>`;
     }).join('');
-    return `<div style="display:flex;gap:8px;align-items:flex-end;height:80px;padding:0 4px">${bars}</div>`;
-}
-function sparkBars(history) {
-    const bars = history.map(h => {
-        const v = +h.oee || 0;
-        const col = oeeColor(v);
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:10px;color:#888">${fmt1(v)}%</div>
-            <div style="flex:1;width:100%;background:${v > 0 ? col : '#eee'};border-radius:3px 3px 0 0;min-height:4px;max-height:60px;height:${Math.max((v / 100) * 60, 4)}px"></div>
-            <div style="font-size:10px;color:#888">${h.week}</div>
-        </div>`;
-    }).join('');
-    return `<div style="display:flex;gap:8px;align-items:flex-end;height:80px;padding:0 4px">${bars}</div>`;
+    return `<div style="display:flex;gap:8px;align-items:flex-end;height:90px;padding:0 4px">${bars}</div>`;
 }
