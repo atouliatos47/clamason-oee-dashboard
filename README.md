@@ -42,3 +42,4 @@ Open http://localhost:3011
 - Multer (file uploads)
 - SheetJS/xlsx (XLS parsing)
 - Vanilla JS PWA (no framework)
+ 
