@@ -85,8 +85,8 @@ function renderPareto() {
     const total = sorted.reduce((s, d) => s + +d[paretoMetric], 0);
     const maxVal = +sorted[0][paretoMetric];
 
-    const W = 900, H = 320;
-    const padL = 60, padR = 60, padT = 20, padB = 80;
+    const W = 900, H = 340;
+    const padL = 60, padR = 60, padT = 20, padB = 110;
     const chartW = W - padL - padR;
     const chartH = H - padT - padB;
     const barW = chartW / sorted.length;
@@ -119,11 +119,10 @@ function renderPareto() {
     const line80Y = padT + chartH - 0.8 * chartH;
 
     const xLabels = sorted.map((d, i) => {
-        if (sorted.length > 10 && i % 2 !== 0) return '';
         const x = padL + i * barW + barW / 2;
-        const name = d.name.length > 12 ? d.name.slice(0, 11) + '…' : d.name;
+        const name = d.name.length > 15 ? d.name.slice(0, 14) + '…' : d.name;
         return `<text x="${x}" y="${H - padB + 14}" text-anchor="end"
-                      transform="rotate(-35,${x},${H - padB + 14})"
+                      transform="rotate(-45,${x},${H - padB + 14})"
                       font-size="10" fill="#555">${name}</text>`;
     }).join('');
 
