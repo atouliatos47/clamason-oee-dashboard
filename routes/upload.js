@@ -219,11 +219,9 @@ router.get('/machine-mapping', async (req, res) => {
           updated_at   TIMESTAMPTZ DEFAULT NOW()
         )
       `);
-      const [mappings, agility, sfc] = await Promise.all([
-        client.query(`SELECT agility_name, sfc_name FROM machine_mapping ORDER BY agility_name`),
-        client.query(`SELECT DISTINCT name AS agility_name FROM agility_data ORDER BY name`),
-        client.query(`SELECT DISTINCT machine AS sfc_name FROM oee_data ORDER BY machine`),
-      ]);
+      const mappings = await client.query(`SELECT agility_name, sfc_name FROM machine_mapping ORDER BY agility_name`);
+      const agility  = await client.query(`SELECT DISTINCT name AS agility_name FROM agility_data ORDER BY name`);
+      const sfc      = await client.query(`SELECT DISTINCT machine AS sfc_name FROM oee_data ORDER BY machine`);
       res.json({
         mappings: mappings.rows,
         agilityNames: agility.rows.map(r => r.agility_name),
