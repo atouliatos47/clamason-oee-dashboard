@@ -30,6 +30,8 @@ function showPage(page, param = null) {
         if (detailPage) detailPage.classList.add('active');
     } else if (page === 'kpi') {
         renderKPIBoard();
+    } else if (page === 'mapping') {
+        loadMachineMapping();
     }
 }
 
