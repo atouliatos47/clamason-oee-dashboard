@@ -16,7 +16,7 @@ function handleAgilityFile(input) {
 }
 
 async function uploadSFC() {
-    const weekLabel = document.getElementById('sfcWeekLabel').value.trim();
+    let weekLabel = document.getElementById('sfcWeekLabel').value.trim(); // let not const
     const fileInput = document.getElementById('sfcFile');
     const files = fileInput ? fileInput.files : null;
     const status = document.getElementById('sfcStatus');
@@ -26,6 +26,8 @@ async function uploadSFC() {
         status.textContent = '❌ Please select at least one file';
         return;
     }
+
+    // Single file with no label — auto-extract week number from filename
     if (files.length === 1 && !weekLabel) {
         const match = files[0].name.match(/(\d+)/);
         if (match) {
@@ -90,7 +92,7 @@ async function uploadAgility() {
 
     const now = new Date();
     const from = new Date(now.getFullYear() - 1, now.getMonth());
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const periodLabel = `${months[from.getMonth()]} ${from.getFullYear()} - ${months[now.getMonth()]} ${now.getFullYear()}`;
 
     const btn = document.querySelector('button[onclick="uploadAgility()"]');
@@ -123,7 +125,7 @@ async function uploadAgility() {
 }
 
 // Drag and drop handlers
-['sfcDropZone', 'agilityDropZone'].forEach(id => {
+['sfcDropZone','agilityDropZone'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });

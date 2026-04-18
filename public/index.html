@@ -78,10 +78,9 @@
       </div>
     </div>
 
-    <!-- ═══ PAGE: OEE TABLE ═══ -->
+    <!-- ═══ PAGE: OEE ═══ -->
     <div id="page-oee" class="page">
       <div class="kpi-grid" id="oeeKpiGrid" style="margin-bottom:16px;"></div>
-      <div id="oeeBarsChart" class="card" style="margin-bottom:16px;padding:16px 20px;"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;" id="quickFilters">
           <button class="week-tab active" onclick="setQuickFilter(4,this)">Last 4 wks</button>
@@ -93,33 +92,7 @@
           style="border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;color:#243547;background:#fff;cursor:pointer;">
         </select>
       </div>
-      <div class="filters">
-        <label>Search:</label>
-        <input type="text" id="oeeSearch" placeholder="Machine name..." style="width:180px" oninput="renderOEETable()">
-        <select id="oeeBandFilter" onchange="renderOEETable()">
-          <option value="">All Avail</option>
-          <option value="good">≥85%</option>
-          <option value="ok">70–84%</option>
-          <option value="low">50–69%</option>
-          <option value="poor">&lt;50%</option>
-        </select>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th onclick="sortOEE('machine')">Machine</th>
-                <th onclick="sortOEE('avail')">Avail %</th>
-                <th onclick="sortOEE('oee')">OEE %</th>
-                <th onclick="sortOEE('unplanned_h')">⚠ Unplanned h</th>
-                <th onclick="sortOEE('perf')">Perf %</th>
-              </tr>
-            </thead>
-            <tbody id="oeeTableBody"></tbody>
-          </table>
-        </div>
-      </div>
+      <div id="oeeBarsChart" class="card" style="padding:16px 20px;"></div>
     </div>
 
     <!-- ═══ PAGE: MAINTENANCE ═══ -->

@@ -4,7 +4,7 @@ let oeeQuickFilter = 4;
 
 // ── SEMI-CIRCULAR GAUGE ───────────────────────────────────────────────────────
 function drawSemiGauge(value, target, label, W, H) {
-    W = W || 110; H = H || 74;
+    W = W || 130; H = H || 88;
     const cx = W / 2, cy = H - 14;
     const r  = Math.min(cx - 8, cy - 4);
     const pct = Math.max(0, Math.min(100, +value || 0));
@@ -169,7 +169,6 @@ function renderOEEPage() {
     }
     renderOEEKPIs();
     renderOEEVisuals();
-    renderOEETable();
 }
 
 function renderOEEKPIs() {
@@ -248,7 +247,7 @@ function renderOEEVisuals() {
         Active Machines — ${wk || '—'}
         <span style="float:right;font-weight:400;font-size:10px;color:#aaa">sorted worst → best availability · click for detail</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
         ${renderMachineCards(data, target)}
     </div>`;
 }
@@ -259,7 +258,6 @@ function setWeekFromSelect(wk) {
     document.querySelectorAll('#quickFilters .week-tab').forEach(t => t.classList.remove('active'));
     renderOEEKPIs();
     renderOEEVisuals();
-    renderOEETable();
 }
 
 function setQuickFilter(n, btn) {
