@@ -233,7 +233,7 @@ function renderOEEVisuals() {
         <div>
             <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">
                 Trend — All Weeks
-                <span style="float:right;font-weight:400;color:#aaa">
+                <span style="float:right;font-weight:400;color:#243547">
                     <span style="color:#95C11F">■</span> Availability &nbsp;
                     <span style="color:#243547">■</span> OEE &nbsp;
                     <span style="color:#e67e22">■</span> Perf &nbsp;
