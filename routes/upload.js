@@ -1,15 +1,15 @@
 const express = require('express');
-const router  = express.Router();
-const multer  = require('multer');
-const XLSX    = require('xlsx');
+const router = express.Router();
+const multer = require('multer');
+const XLSX = require('xlsx');
 const { pool } = require('../db');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Parse SFC XLS ─────────────────────────────────────────────────────────────
 function parseSFC(buffer) {
-  const wb  = XLSX.read(buffer, { type: 'buffer', cellDates: false });
-  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+  const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
   const machines = [];
@@ -58,17 +58,17 @@ function parseSFC(buffer) {
       colMap = {};
       for (let c = 0; c < row.length; c++) {
         const h = row[c] ? String(row[c]).replace(/\n/g, ' ').toLowerCase().trim() : '';
-        if (h.includes('total') && h.includes('avail'))   colMap.totalAvail  = c;
-        if (h.includes('planned') && h.includes('down'))  colMap.plannedDown = c;
-        if (h.includes('net') && h.includes('avail'))     colMap.netAvail    = c;
-        if (h.includes('unplanned'))                       colMap.unplanned   = c;
-        if (h.includes('run') && h.includes('time'))      colMap.runTime     = c;
-        if (h.includes('equip') && h.includes('avail'))   colMap.avail       = c;
-        if (h.includes('total') && h.includes('parts'))   colMap.totalParts  = c;
-        if (h.includes('perf') && h.includes('eff'))      colMap.perf        = c;
-        if (h.includes('scrap'))                           colMap.scrap       = c;
-        if (h.includes('quality'))                         colMap.quality     = c;
-        if (h.includes('oee'))                             colMap.oee         = c;
+        if (h.includes('total') && h.includes('avail')) colMap.totalAvail = c;
+        if (h.includes('planned') && h.includes('down')) colMap.plannedDown = c;
+        if (h.includes('net') && h.includes('avail')) colMap.netAvail = c;
+        if (h.includes('unplanned')) colMap.unplanned = c;
+        if (h.includes('run') && h.includes('time')) colMap.runTime = c;
+        if (h.includes('equip') && h.includes('avail')) colMap.avail = c;
+        if (h.includes('total') && h.includes('parts')) colMap.totalParts = c;
+        if (h.includes('perf') && h.includes('eff')) colMap.perf = c;
+        if (h.includes('scrap')) colMap.scrap = c;
+        if (h.includes('quality')) colMap.quality = c;
+        if (h.includes('oee')) colMap.oee = c;
       }
     }
 
@@ -80,27 +80,27 @@ function parseSFC(buffer) {
     // Detect Sub Totals row
     if (cell.includes('Sub Totals') && currentMachine) {
       // Use detected colMap or fall back to known offsets from Python parser
-      const pd  = colMap ? row[colMap.plannedDown] : row[machineCol + 8];
-      const na  = colMap ? row[colMap.netAvail]    : row[machineCol + 13];
-      const un  = colMap ? row[colMap.unplanned]   : row[machineCol + 14];
-      const rt  = colMap ? row[colMap.runTime]     : row[machineCol + 16];
-      const av  = colMap ? row[colMap.avail]       : row[machineCol + 20];
-      const tp  = colMap ? row[colMap.totalParts]  : row[machineCol + 22];
-      const pe  = colMap ? row[colMap.perf]        : row[machineCol + 28];
-      const qu  = colMap ? row[colMap.quality]     : row[machineCol + 32];
-      const oe  = colMap ? row[colMap.oee]         : row[machineCol + 34];
+      const pd = colMap ? row[colMap.plannedDown] : row[machineCol + 8];
+      const na = colMap ? row[colMap.netAvail] : row[machineCol + 13];
+      const un = colMap ? row[colMap.unplanned] : row[machineCol + 14];
+      const rt = colMap ? row[colMap.runTime] : row[machineCol + 16];
+      const av = colMap ? row[colMap.avail] : row[machineCol + 20];
+      const tp = colMap ? row[colMap.totalParts] : row[machineCol + 22];
+      const pe = colMap ? row[colMap.perf] : row[machineCol + 28];
+      const qu = colMap ? row[colMap.quality] : row[machineCol + 32];
+      const oe = colMap ? row[colMap.oee] : row[machineCol + 34];
 
       machines.push({
-        machine:        currentMachine,
+        machine: currentMachine,
         planned_down_h: toHrs(pd),
-        net_avail_h:    toHrs(na),
-        unplanned_h:    toHrs(un),
-        run_h:          toHrs(rt),
-        avail:          toNum(av),
-        perf:           toNum(pe),
-        quality:        toNum(qu),
-        oee:            toNum(oe),
-        total_parts:    parseInt(tp) || 0,
+        net_avail_h: toHrs(na),
+        unplanned_h: toHrs(un),
+        run_h: toHrs(rt),
+        avail: toNum(av),
+        perf: toNum(pe),
+        quality: toNum(qu),
+        oee: toNum(oe),
+        total_parts: parseInt(tp) || 0,
       });
     }
   }
@@ -112,8 +112,8 @@ function parseSFC(buffer) {
 //   Row with 'Code','Description','Site','Location','','Jobs',...,'Downtime Hours'
 //   Then one 'Actual' row + one 'Average' row per machine
 function parseAgilityBreakdownSummary(buffer) {
-  const wb  = XLSX.read(buffer, { type: 'buffer' });
-  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const wb = XLSX.read(buffer, { type: 'buffer' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
   const machines = [];
@@ -131,19 +131,19 @@ function parseAgilityBreakdownSummary(buffer) {
     // Only process 'Actual' rows that have a machine code
     if (c4 !== 'Actual' || !/^\d{4,}$/.test(c0)) continue;
 
-    const numJobs    = parseInt(row[5])   || 0;
+    const numJobs = parseInt(row[5]) || 0;
     const downtimeHr = Math.round((parseFloat(row[10]) || 0) * 10) / 10;
 
     machines.push({
-      code:            c0,
-      name:            c1.replace(/\s+/g, ' '),
-      cost_labour:     0,
-      labour_hrs:      0,
-      num_jobs:        numJobs,
-      downtime_hrs:    downtimeHr,
-      tpm_count:       0,
+      code: c0,
+      name: c1.replace(/\s+/g, ' '),
+      cost_labour: 0,
+      labour_hrs: 0,
+      num_jobs: numJobs,
+      downtime_hrs: downtimeHr,
+      tpm_count: 0,
       breakdown_count: numJobs,
-      breakdowns:      [],
+      breakdowns: [],
     });
   }
 
@@ -173,27 +173,27 @@ function parseAgility(buffer) {
     const c2 = row[2] != null ? String(row[2]).trim() : '';
 
     const isMachineRow = /^\d{4,8}$/.test(c0) && c1 !== '' && c2 === '';
-    const isJobRow     = c0 === '' && /^\d{6}$/.test(c1) && c2 !== '';
+    const isJobRow = c0 === '' && /^\d{6}$/.test(c1) && c2 !== '';
 
     if (isMachineRow) {
       if (current) machines.push(current);
       current = {
-        code:            c0,
-        name:            c1.replace(/\s+/g, ' '),
-        cost_labour:     Math.round(parseFloat(row[6]) || 0),
-        labour_hrs:      Math.round((parseFloat(row[7]) || 0) * 10) / 10,
-        num_jobs:        parseInt(row[10]) || 0,
-        downtime_hrs:    Math.round((parseFloat(row[11]) || 0) * 10) / 10,
-        tpm_count:       0,
+        code: c0,
+        name: c1.replace(/\s+/g, ' '),
+        cost_labour: Math.round(parseFloat(row[6]) || 0),
+        labour_hrs: Math.round((parseFloat(row[7]) || 0) * 10) / 10,
+        num_jobs: parseInt(row[10]) || 0,
+        downtime_hrs: Math.round((parseFloat(row[11]) || 0) * 10) / 10,
+        tpm_count: 0,
         breakdown_count: 0,
-        breakdowns:      [],
+        breakdowns: [],
       };
 
     } else if (isJobRow && current) {
       const isTpm = /tpm|preventive|planned service/i.test(c2);
       const dt = parseFloat(row[11]) || 0;
-      const lh = parseFloat(row[7])  || 0;
-      const lc = parseFloat(row[6])  || 0;
+      const lh = parseFloat(row[7]) || 0;
+      const lc = parseFloat(row[6]) || 0;
 
       if (isTpm) {
         current.tpm_count++;
@@ -201,11 +201,11 @@ function parseAgility(buffer) {
         current.breakdown_count++;
         if (dt > 0 || lh > 0.3) {
           current.breakdowns.push({
-            wo:           c1,
-            desc:         c2.slice(0, 80),
-            labour_hrs:   Math.round(lh * 10) / 10,
+            wo: c1,
+            desc: c2.slice(0, 80),
+            labour_hrs: Math.round(lh * 10) / 10,
             downtime_hrs: Math.round(dt * 10) / 10,
-            cost_labour:  Math.round(lc),
+            cost_labour: Math.round(lc),
           });
         }
       }
@@ -252,7 +252,7 @@ router.post('/sfc', upload.single('file'), async (req, res) => {
             total_parts    = EXCLUDED.total_parts,
             uploaded_at    = NOW()
         `, [weekLabel, m.machine, m.planned_down_h, m.net_avail_h, m.unplanned_h,
-            m.run_h, m.avail, m.perf, m.quality, m.oee, m.total_parts]);
+          m.run_h, m.avail, m.perf, m.quality, m.oee, m.total_parts]);
         inserted++;
       }
       res.json({ success: true, week: weekLabel, machines: inserted });
@@ -301,7 +301,7 @@ router.post('/agility', upload.single('file'), async (req, res) => {
             breakdowns      = EXCLUDED.breakdowns,
             uploaded_at     = NOW()
         `, [periodLabel, m.code, m.name, m.cost_labour, m.labour_hrs, m.num_jobs,
-            m.downtime_hrs, m.tpm_count, m.breakdown_count, JSON.stringify(m.breakdowns)]);
+          m.downtime_hrs, m.tpm_count, m.breakdown_count, JSON.stringify(m.breakdowns)]);
         inserted++;
       }
       res.json({ success: true, period: periodLabel, machines: inserted });
@@ -317,13 +317,13 @@ router.post('/agility', upload.single('file'), async (req, res) => {
 // ── POST /api/upload/debug-agility ───────────────────────────────────────────
 router.post('/debug-agility', upload.single('file'), async (req, res) => {
   try {
-    const wb  = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const ws  = wb.Sheets['Sheet2'] || wb.Sheets[wb.SheetNames[wb.SheetNames.length - 1]];
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets['Sheet2'] || wb.Sheets[wb.SheetNames[wb.SheetNames.length - 1]];
     const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
     // Return first 30 rows showing all columns
     const sample = raw.slice(0, 30).map((row, i) => ({
       rowIndex: i,
-      cols: row.map((c, ci) => ({ ci, val: c !== null ? String(c).slice(0,30) : null })).filter(x => x.val)
+      cols: row.map((c, ci) => ({ ci, val: c !== null ? String(c).slice(0, 30) : null })).filter(x => x.val)
     }));
     res.json({ sheets: wb.SheetNames, sample });
   } catch (err) {
