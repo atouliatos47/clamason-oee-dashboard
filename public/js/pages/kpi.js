@@ -278,26 +278,37 @@ function renderKPIBoard() {
             ${top5.map((m, i) => {
         const assetMTTR = +m.breakdown_count > 0
             ? Math.round((+m.downtime_hrs / +m.breakdown_count) * 10) / 10 : 0;
-        const mttrCol = assetMTTR <= 4 ? '#27ae60' : assetMTTR <= 8 ? '#e67e22' : '#c0392b';
+        const assetRunH = state.weeks.reduce((s, w) => {
+            const row = (state.oeeData[w] || []).find(d => d.machine === m.name);
+            return s + (row ? +row.run_h || 0 : 0);
+        }, 0);
+        const assetMTBF = +m.breakdown_count > 0 && assetRunH > 0
+            ? Math.round((assetRunH / +m.breakdown_count) * 10) / 10 : 0;
+        const mttrCol = assetMTTR <= 8 ? '#27ae60' : assetMTTR <= 12 ? '#e67e22' : '#c0392b';
+        const mtbfCol = assetMTBF >= 6 ? '#27ae60' : assetMTBF >= 3 ? '#e67e22' : '#c0392b';
         return `
-                <div style="display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #f0f0f0;">
-                    <div style="width:34px;height:34px;border-radius:50%;background:${i === 0 ? '#c0392b' : i === 1 ? '#e67e22' : i === 2 ? '#e6b800' : '#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">${i + 1}</div>
-                    <div style="flex:1;font-size:17px;font-weight:700;color:#243547;">${m.name}</div>
-                    <div style="text-align:center;min-width:90px;">
-                        <div style="font-size:18px;color:#c0392b;font-weight:700;">${Math.round(+m.downtime_hrs)}h</div>
-                        <div style="font-size:12px;color:#888;margin-top:2px;">downtime</div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #f0f0f0;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:${i === 0 ? '#c0392b' : i === 1 ? '#e67e22' : i === 2 ? '#e6b800' : '#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${i + 1}</div>
+                    <div style="flex:1;font-size:16px;font-weight:700;color:#243547;">${m.name}</div>
+                    <div style="text-align:center;min-width:80px;">
+                        <div style="font-size:17px;color:#c0392b;font-weight:700;">${Math.round(+m.downtime_hrs)}h</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">downtime</div>
+                    </div>
+                    <div style="text-align:center;min-width:70px;">
+                        <div style="font-size:17px;font-weight:700;color:#243547;">${m.breakdown_count}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">breakdowns</div>
                     </div>
                     <div style="text-align:center;min-width:80px;">
-                        <div style="font-size:18px;font-weight:700;color:#243547;">${m.breakdown_count}</div>
-                        <div style="font-size:12px;color:#888;margin-top:2px;">breakdowns</div>
-                    </div>
-                    <div style="text-align:center;min-width:90px;">
-                        <div style="font-size:18px;font-weight:700;color:${mttrCol};">${assetMTTR}h</div>
-                        <div style="font-size:12px;color:#888;margin-top:2px;">MTTR</div>
+                        <div style="font-size:17px;font-weight:700;color:${mttrCol};">${assetMTTR}h</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">MTTR</div>
                     </div>
                     <div style="text-align:center;min-width:80px;">
-                        <div style="font-size:18px;font-weight:700;color:#243547;">${m.tpm_count}</div>
-                        <div style="font-size:12px;color:#888;margin-top:2px;">TPM visits</div>
+                        <div style="font-size:17px;font-weight:700;color:${mtbfCol};">${assetMTBF > 0 ? assetMTBF + 'h' : '—'}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">MTBF</div>
+                    </div>
+                    <div style="text-align:center;min-width:70px;">
+                        <div style="font-size:17px;font-weight:700;color:#243547;">${m.tpm_count}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">TPM visits</div>
                     </div>
                 </div>`;
     }).join('')}
