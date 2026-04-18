@@ -108,7 +108,7 @@
           <option value="Rockwell">Rockwell</option>
         </select>
         <select id="oeeBandFilter" onchange="renderOEETable()">
-          <option value="">All OEE</option>
+          <option value="">All Avail</option>
           <option value="good">≥85%</option>
           <option value="ok">70–84%</option>
           <option value="low">50–69%</option>
@@ -124,9 +124,7 @@
                 <th onclick="sortOEE('unplanned_h')">⚠ Unplanned h</th>
                 <th onclick="sortOEE('avail')">Avail %</th>
                 <th onclick="sortOEE('perf')">Perf %</th>
-                <th onclick="sortOEE('quality')">Quality %</th>
                 <th onclick="sortOEE('oee')">OEE %</th>
-                <th onclick="sortOEE('total_parts')">Parts</th>
                 <th onclick="sortOEE('planned_down_h')">Planned Down</th>
                 <th onclick="sortOEE('run_h')">Run Time</th>
               </tr>

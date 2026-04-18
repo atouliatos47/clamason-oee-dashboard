@@ -113,7 +113,7 @@ function renderDetail(d) {
             </div>
 
             <div class="card">
-                <div class="card-header"><span class="card-title">Weekly OEE trend</span></div>
+                <div class="card-header"><span class="card-title">Weekly Availability trend</span></div>
                 <div style="margin-bottom:16px">${bds}</div>
                 <div class="table-wrap">
                     <table>
@@ -465,13 +465,16 @@ function renderDetail(d) {
 }
 
 function sparkBars(history) {
+    const target = state.wcTarget || 65;
     const bars = history.map(h => {
-        const v = +h.oee || 0;
-        const col = oeeColor(v);
-        const barH = Math.max((v / 100) * 60, v > 0 ? 4 : 2);
+        const oee  = +h.oee  || 0;
+        const avail = +h.avail || 0;
+        const barH = Math.max((avail / 100) * 60, avail > 0 ? 4 : 2);
+        const col  = avail >= target ? '#27ae60'
+                   : avail >= target * 0.9 ? '#e67e22' : '#c0392b';
         return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div style="font-size:10px;color:#888">${fmt1(v)}%</div>
-            <div style="width:100%;height:${barH}px;background:${v > 0 ? col : '#eee'};border-radius:3px 3px 0 0;"></div>
+            <div style="font-size:10px;color:#888">${fmt1(avail)}%</div>
+            <div style="width:100%;height:${barH}px;background:${avail > 0 ? col : '#eee'};border-radius:3px 3px 0 0;"></div>
             <div style="font-size:10px;color:#888">${h.week}</div>
         </div>`;
     }).join('');
