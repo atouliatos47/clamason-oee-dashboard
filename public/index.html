@@ -81,6 +81,7 @@
     <!-- ═══ PAGE: OEE TABLE ═══ -->
     <div id="page-oee" class="page">
       <div class="kpi-grid" id="oeeKpiGrid" style="margin-bottom:16px;"></div>
+      <div id="oeeTrendChart"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;" id="quickFilters">
           <button class="week-tab active" onclick="setQuickFilter(4,this)">Last 4 wks</button>
@@ -212,8 +213,8 @@
           <button class="btn btn-lime btn-block" onclick="uploadSFC()">Upload SFC Data</button>
           <div id="sfcStatus" style="margin-top:8px;font-size:13px;text-align:center;"></div>
           <hr style="border:none;border-top:1px solid #eee;margin:14px 0;">
-          <button class="btn btn-block" style="background:#e67e22;color:#fff;font-size:13px;"
-            onclick="resetSFC()">🗑 Reset SFC Data</button>
+          <button class="btn btn-block" style="background:#e67e22;color:#fff;font-size:13px;" onclick="resetSFC()">🗑
+            Reset SFC Data</button>
           <div id="sfcResetStatus" style="margin-top:6px;font-size:12px;text-align:center;"></div>
         </div>
 

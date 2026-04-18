@@ -1,6 +1,7 @@
 // oee.js - Availability & OEE performance page (maintenance focus)
 
 let oeeQuickFilter = 4; // default: last 4 weeks
+let oeeTrendMachine = '__fleet__';
 
 function renderOEEPage() {
     const select = document.getElementById('weekSelect');
@@ -10,6 +11,7 @@ function renderOEEPage() {
         ).join('');
     }
     renderOEEKPIs();
+    renderOEETrendChart();
     renderOEETable();
 }
 
@@ -57,6 +59,202 @@ function renderOEEKPIs() {
         </div>`;
 }
 
+// ── TREND CHART ───────────────────────────────────────────────────────────────
+function renderOEETrendChart() {
+    const container = document.getElementById('oeeTrendChart');
+    if (!container) return;
+
+    const weeks = state.weeks;
+    if (weeks.length < 2) {
+        container.innerHTML = `<div class="card" style="padding:20px;text-align:center;color:#aaa">
+            Upload at least 2 weeks of SFC data to see trends</div>`;
+        return;
+    }
+
+    const target = state.wcTarget || 65;
+
+    // Build machine list for selector
+    const allMachines = [...new Set(
+        weeks.flatMap(w => (state.oeeData[w] || []).map(d => d.machine))
+    )].sort();
+
+    // Get data points for selected machine or fleet
+    const availPoints = weeks.map(w => {
+        const data = state.oeeData[w] || [];
+        if (oeeTrendMachine === '__fleet__') {
+            const active = data.filter(d => +d.net_avail_h > 0);
+            return active.length ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : null;
+        } else {
+            const row = data.find(d => d.machine === oeeTrendMachine);
+            return row ? +row.avail : null;
+        }
+    });
+
+    const oeePoints = weeks.map(w => {
+        const data = state.oeeData[w] || [];
+        if (oeeTrendMachine === '__fleet__') {
+            const active = data.filter(d => +d.oee > 0);
+            return active.length ? active.reduce((s, d) => s + (+d.oee), 0) / active.length : null;
+        } else {
+            const row = data.find(d => d.machine === oeeTrendMachine);
+            return row ? +row.oee : null;
+        }
+    });
+
+    // Detect "since Feb 2026" — find first week index that is Feb 2026 or later
+    // Week labels may be "Wk 6 2026", "2026-W06", or date strings — try to detect
+    const febIndex = weeks.findIndex(w => {
+        const s = String(w);
+        // Match patterns like "Wk 6 2026", "Wk 7 2026" ... "Wk 52 2026" after Feb
+        if (/wk\s*([0-9]+)\s*2026/i.test(s)) {
+            const wkNum = parseInt(s.match(/wk\s*([0-9]+)/i)[1]);
+            return wkNum >= 5; // week 5 is ~Feb
+        }
+        // ISO week: 2026-W05
+        if (/2026-W([0-9]+)/i.test(s)) {
+            return parseInt(s.match(/W([0-9]+)/i)[1]) >= 5;
+        }
+        // Date string containing 2026
+        if (s.includes('2026')) return true;
+        return false;
+    });
+
+    // SVG dimensions
+    const W = 860, H = 260;
+    const padL = 48, padR = 20, padT = 20, padB = 50;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const n = weeks.length;
+    const xStep = chartW / Math.max(n - 1, 1);
+
+    function xOf(i) { return padL + i * xStep; }
+    function yOf(v) { return padT + chartH - (Math.min(v, 100) / 100) * chartH; }
+
+    // Feb shading
+    let febShade = '';
+    if (febIndex >= 0) {
+        const x1 = xOf(febIndex);
+        febShade = `<rect x="${x1}" y="${padT}" width="${W - padR - x1}" height="${chartH}"
+            fill="#95C11F" opacity="0.08" rx="2"/>
+            <text x="${x1 + 6}" y="${padT + 14}" font-size="10" fill="#95C11F" font-weight="700">Since Feb 2026</text>`;
+    }
+
+    // Grid lines & Y labels
+    let grid = '';
+    [0, 25, 50, 65, 75, 100].forEach(pct => {
+        const y = yOf(pct);
+        const isTarget = pct === target;
+        grid += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"
+            stroke="${isTarget ? '#c0392b' : '#f0f0f0'}"
+            stroke-width="${isTarget ? 1.5 : 1}"
+            stroke-dasharray="${isTarget ? '6,3' : 'none'}"/>
+            <text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="10"
+            fill="${isTarget ? '#c0392b' : '#aaa'}"
+            font-weight="${isTarget ? 700 : 400}">${pct}%</text>`;
+    });
+    grid += `<text x="${padL - 6}" y="${yOf(target) - 6}" text-anchor="end" font-size="9"
+        fill="#c0392b" font-weight="700">Target</text>`;
+
+    // X labels — show every other week if crowded
+    let xLabels = '';
+    weeks.forEach((w, i) => {
+        if (n > 12 && i % 2 !== 0) return;
+        const x = xOf(i);
+        const label = String(w).replace('Wk ', 'W').slice(0, 10);
+        xLabels += `<text x="${x}" y="${H - padB + 16}" text-anchor="end"
+            transform="rotate(-35,${x},${H - padB + 16})"
+            font-size="9" fill="#888">${label}</text>`;
+    });
+
+    // Build polyline points, skip nulls
+    function buildLine(points, col, dash = '') {
+        let path = '';
+        let segments = [];
+        let seg = [];
+        points.forEach((v, i) => {
+            if (v !== null) {
+                seg.push(`${xOf(i)},${yOf(v)}`);
+            } else {
+                if (seg.length > 1) segments.push(seg);
+                seg = [];
+            }
+        });
+        if (seg.length > 1) segments.push(seg);
+        segments.forEach(s => {
+            path += `<polyline points="${s.join(' ')}" fill="none" stroke="${col}"
+                stroke-width="2.5" stroke-dasharray="${dash}" stroke-linejoin="round"/>`;
+        });
+        // dots
+        points.forEach((v, i) => {
+            if (v !== null) {
+                path += `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3.5"
+                    fill="${col}" stroke="#fff" stroke-width="1.5"/>`;
+            }
+        });
+        return path;
+    }
+
+    const availLine = buildLine(availPoints, '#95C11F');
+    const oeeLine   = buildLine(oeePoints,   '#243547', '5,3');
+
+    const svg = `
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+         style="width:100%;height:auto;display:block">
+        ${febShade}
+        ${grid}
+        ${availLine}
+        ${oeeLine}
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + chartH}" stroke="#ddd" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#ddd" stroke-width="1"/>
+        ${xLabels}
+    </svg>`;
+
+    // Machine selector options
+    const machineOptions = `
+        <option value="__fleet__">Fleet Average</option>
+        ${allMachines.map(m => `<option value="${m}" ${m === oeeTrendMachine ? 'selected' : ''}>${m}</option>`).join('')}`;
+
+    container.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="margin-bottom:12px">
+            <span class="card-title">📈 Availability &amp; OEE Trend</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <select onchange="setOEETrendMachine(this.value)"
+                    style="padding:5px 10px;border-radius:6px;border:1px solid #ddd;
+                           font-size:12px;color:#243547;cursor:pointer">
+                    ${machineOptions}
+                </select>
+            </div>
+        </div>
+        <div style="overflow-x:auto">${svg}</div>
+        <div style="display:flex;align-items:center;gap:20px;margin-top:10px;font-size:11px;color:#888;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:5px">
+                <span style="width:24px;height:3px;background:#95C11F;border-radius:2px;display:inline-block"></span>
+                Availability %
+            </span>
+            <span style="display:flex;align-items:center;gap:5px">
+                <span style="width:24px;height:3px;background:#243547;border-radius:2px;display:inline-block;
+                    background: repeating-linear-gradient(to right,#243547 0,#243547 5px,transparent 5px,transparent 8px)"></span>
+                OEE %
+            </span>
+            <span style="display:flex;align-items:center;gap:5px">
+                <span style="width:24px;height:2px;background:#c0392b;border-radius:2px;display:inline-block"></span>
+                Target ${target}%
+            </span>
+            ${febIndex >= 0 ? `<span style="display:flex;align-items:center;gap:5px">
+                <span style="width:14px;height:14px;background:#95C11F;opacity:0.25;border-radius:2px;display:inline-block;border:1px solid #95C11F"></span>
+                Your period (Feb 2026 →)
+            </span>` : ''}
+        </div>
+    </div>`;
+}
+
+function setOEETrendMachine(val) {
+    oeeTrendMachine = val;
+    renderOEETrendChart();
+}
+
+// ── WEEK FILTERS ──────────────────────────────────────────────────────────────
 function setWeekFromSelect(wk) {
     state.currentWeek = wk;
     document.querySelectorAll('#quickFilters .week-tab').forEach(t => t.classList.remove('active'));
