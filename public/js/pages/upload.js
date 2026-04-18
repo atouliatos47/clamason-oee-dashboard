@@ -151,41 +151,46 @@ async function uploadAgility() {
 async function loadMachineMapping() {
     const el = document.getElementById('machineMappingBody');
     if (!el) return;
-    el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Loading...</td></tr>';
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch('/api/upload/machine-mapping', { signal: controller.signal });
-        clearTimeout(timeout);
-        const data = await res.json();
-        state.machineMapping = data.mappings;
 
-        if (!data.agilityNames.length) {
-            el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Upload Agility data first to see machines here</td></tr>';
-            return;
-        }
+    // Build lists from state (already loaded in browser — no extra API call)
+    const agilityNames = [...new Set((state.maintData || []).map(m => m.name).filter(Boolean))].sort();
+    const sfcNames = [...new Set(
+        Object.values(state.oeeData || {}).flatMap(wk => wk.map(m => m.machine))
+    )].filter(Boolean).sort();
 
-        const mappingIndex = {};
-        data.mappings.forEach(m => { mappingIndex[m.agility_name] = m.sfc_name || ''; });
-
-        el.innerHTML = data.agilityNames.map(name => {
-            const currentSfc = mappingIndex[name] || '';
-            const opts = `<option value="">— Not in SFC —</option>` +
-                data.sfcNames.map(s => `<option value="${s}" ${s === currentSfc ? 'selected' : ''}>${s}</option>`).join('');
-            return `<tr style="border-bottom:1px solid #f0f0f0">
-                <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#243547">${name}</td>
-                <td style="padding:10px 14px;font-size:13px;color:#888">→</td>
-                <td style="padding:10px 14px">
-                    <select data-agility="${name.replace(/"/g,'&quot;')}"
-                        style="width:100%;border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;color:#243547;background:#fff">
-                        ${opts}
-                    </select>
-                </td>
-            </tr>`;
-        }).join('');
-    } catch (err) {
-        el.innerHTML = `<tr><td colspan="3" style="padding:16px;color:#c0392b">❌ ${err.message}</td></tr>`;
+    if (!agilityNames.length) {
+        el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Upload Agility data first to see machines here</td></tr>';
+        return;
     }
+
+    // Load saved mappings from API (best effort)
+    let savedMappings = {};
+    try {
+        const res = await fetch('/api/upload/machine-mapping');
+        if (res.ok) {
+            const data = await res.json();
+            (data.mappings || []).forEach(m => { savedMappings[m.agility_name] = m.sfc_name || ''; });
+        }
+    } catch(e) { /* show empty dropdowns if API fails */ }
+
+    el.innerHTML = agilityNames.map(name => {
+        const currentSfc = savedMappings[name] || '';
+        const opts = `<option value="">— Not in SFC —</option>` +
+            sfcNames.map(s => `<option value="${s}" ${s === currentSfc ? 'selected' : ''}>${s}</option>`).join('');
+        return `<tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#243547">${name}</td>
+            <td style="padding:10px 14px;font-size:13px;color:#888">→</td>
+            <td style="padding:10px 14px">
+                <select data-agility="${name.replace(/"/g,'&quot;')}"
+                    style="width:100%;border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;color:#243547;background:#fff">
+                    ${opts}
+                </select>
+            </td>
+        </tr>`;
+    }).join('');
+
+    state.machineMapping = Object.entries(savedMappings)
+        .map(([k,v]) => ({agility_name: k, sfc_name: v}));
 }
 
 async function saveMachineMapping() {
