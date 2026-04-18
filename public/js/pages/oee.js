@@ -227,7 +227,7 @@ function renderOEEVisuals() {
     <!-- Top row: fleet gauge + trend -->
     <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;margin-bottom:20px">
         <div>
-            <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:6px">Fleet Overview</div>
+           <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:6px">Equipment Overall</div>
             ${renderFleetDonut(avgOEE, avgAvail, target)}
         </div>
         <div>
