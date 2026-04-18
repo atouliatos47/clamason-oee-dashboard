@@ -3,6 +3,11 @@
 if (!state.wcTarget) state.wcTarget = 65;
 
 function renderDashboard() {
+    // Read saved targets from localStorage (same source as KPI Board)
+    const _saved = (() => { try { return JSON.parse(localStorage.getItem('clamason_kpi_targets') || '{}'); } catch { return {}; } })();
+    const mttrTarget = _saved.maxMTTR?.value || 8;
+    const mtbfTarget = _saved.minMTBF?.value || 6;
+
     const wk = state.currentWeek;
     const data = wk ? (state.oeeData[wk] || []) : [];
     const active = data.filter(d => +d.oee > 0);
@@ -17,8 +22,8 @@ function renderDashboard() {
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
     const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
-    const mttrCol = equipMTTR <= 4 ? '#27ae60' : equipMTTR <= 8 ? '#e67e22' : '#c0392b';
-    const mtbfCol = equipMTBF >= 200 ? '#27ae60' : equipMTBF >= 100 ? '#e67e22' : '#c0392b';
+    const mttrCol = equipMTTR <= mttrTarget ? '#27ae60' : equipMTTR <= mttrTarget * 1.5 ? '#e67e22' : '#c0392b';
+    const mtbfCol = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
 
     // Availability from SFC
     const avgAvail = active.length
@@ -61,13 +66,13 @@ function renderDashboard() {
             onclick="showPage('kpi')">
             <div class="kpi-label">Equipment MTTR</div>
             <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
-            <div class="kpi-sub">target &lt;4h · mean time to repair</div>
+            <div class="kpi-sub">target &lt;${mttrTarget}h · mean time to repair</div>
         </div>
         <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
             onclick="showPage('kpi')">
             <div class="kpi-label">Equipment MTBF</div>
             <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
-            <div class="kpi-sub">target &gt;200h · mean time between failures</div>
+            <div class="kpi-sub">target &gt;${mtbfTarget}h · mean time between failures</div>
         </div>
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
             <div class="kpi-label">Labour Cost</div>

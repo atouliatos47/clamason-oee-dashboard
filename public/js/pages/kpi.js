@@ -278,8 +278,16 @@ function renderKPIBoard() {
             ${top5.map((m, i) => {
         const assetMTTR = +m.breakdown_count > 0
             ? Math.round((+m.downtime_hrs / +m.breakdown_count) * 10) / 10 : 0;
+        // Match Agility name to SFC name via ISI number or partial name
+        const isiMatch = m.name.replace(/\s/g,'').match(/ISI(\d+)/i);
+        const isiNum = isiMatch ? isiMatch[1] : null;
         const assetRunH = state.weeks.reduce((s, w) => {
-            const row = (state.oeeData[w] || []).find(d => d.machine === m.name);
+            const row = (state.oeeData[w] || []).find(d => {
+                if (isiNum) return d.machine.replace(/\s/g,'').toUpperCase().includes('ISI' + isiNum);
+                // fallback: try first word match (e.g. "BIHLER" matches "Bihler")
+                const firstWord = m.name.split(/[\s|]+/).filter(x=>x.length>2)[0] || '';
+                return d.machine.toLowerCase().includes(firstWord.toLowerCase());
+            });
             return s + (row ? +row.run_h || 0 : 0);
         }, 0);
         const assetMTBF = +m.breakdown_count > 0 && assetRunH > 0
