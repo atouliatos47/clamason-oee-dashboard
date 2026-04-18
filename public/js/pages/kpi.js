@@ -1,12 +1,12 @@
 // kpi.js - Maintenance KPI Board for board meetings
 
 const DEFAULT_TARGETS = {
-    avail: { value: 75, label: 'Availability', unit: '%' },
-    maxDowntime: { value: 3000, label: 'Max Annual Downtime', unit: 'h' },
-    maxBDs: { value: 200, label: 'Max Breakdowns', unit: '' },
-    maxMTTR: { value: 4, label: 'Max MTTR', unit: 'h' },
-    minMTBF: { value: 200, label: 'Min MTBF', unit: 'h' },
-    tpmTarget: { value: 12, label: 'TPM Visits per Asset', unit: '' },
+    avail: { value: 62, label: 'Availability', unit: '%' },
+    maxDowntime: { value: 4500, label: 'Max Annual Downtime', unit: 'h' },
+    maxBDs: { value: 350, label: 'Max Breakdowns', unit: '' },
+    maxMTTR: { value: 8, label: 'Max MTTR', unit: 'h' },
+    minMTBF: { value: 6, label: 'Min MTBF', unit: 'h' },
+    tpmTarget: { value: 6, label: 'TPM Visits per Asset', unit: '' },
 };
 
 function getTargets() {
