@@ -234,19 +234,19 @@ ${buildParetoSVG('downtime_hrs', 'Downtime Hours')}
   Clamason Engineering — Maintenance Performance Report — Confidential — ${now}
 </div>
 
-<!-- ═══ PAGE 3 — PARETO: COST ═══ -->
+<!-- ═══ PAGE 3 — PARETO: BREAKDOWNS ═══ -->
 <div class="page-break"></div>
 <div style="display:flex;justify-content:space-between;align-items:center;
     padding-bottom:10px;border-bottom:3px solid #243547;margin-bottom:14px;">
   <div style="display:flex;align-items:center;gap:12px;">
     <img src="${logoUrl}" style="height:40px;">
     <div style="font-size:17px;font-weight:700;color:#243547;">
-      Pareto Analysis — Labour Cost
+      Pareto Analysis — Breakdown Count
     </div>
   </div>
   <div style="font-size:10px;color:#888;">Page 3 of 3 &nbsp;·&nbsp; ${period}</div>
 </div>
-${buildParetoSVG('cost_labour', 'Labour Cost')}
+${buildParetoSVG('breakdown_count', 'Breakdown Count')}
 
 <div style="margin-top:12px;font-size:9px;color:#aaa;text-align:right;">
   Clamason Engineering — Maintenance Performance Report — Confidential — ${now}
