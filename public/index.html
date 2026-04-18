@@ -96,7 +96,6 @@
       <div class="filters">
         <label>Search:</label>
         <input type="text" id="oeeSearch" placeholder="Machine name..." style="width:180px" oninput="renderOEETable()">
-
         <select id="oeeBandFilter" onchange="renderOEETable()">
           <option value="">All Avail</option>
           <option value="good">≥85%</option>
@@ -111,12 +110,10 @@
             <thead>
               <tr>
                 <th onclick="sortOEE('machine')">Machine</th>
-                <th onclick="sortOEE('unplanned_h')">⚠ Unplanned h</th>
                 <th onclick="sortOEE('avail')">Avail %</th>
-                <th onclick="sortOEE('perf')">Perf %</th>
                 <th onclick="sortOEE('oee')">OEE %</th>
-                <th onclick="sortOEE('planned_down_h')">Planned Down</th>
-                <th onclick="sortOEE('run_h')">Run Time</th>
+                <th onclick="sortOEE('unplanned_h')">⚠ Unplanned h</th>
+                <th onclick="sortOEE('perf')">Perf %</th>
               </tr>
             </thead>
             <tbody id="oeeTableBody"></tbody>

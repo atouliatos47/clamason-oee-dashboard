@@ -209,13 +209,11 @@ function renderOEETable() {
         return `
         <tr onclick="showPage('detail',${JSON.stringify({ ...d, type: 'oee' }).replace(/"/g, '&quot;')})">
             <td class="name-cell">${d.machine}</td>
+            <td><span style="font-weight:700;color:${availCol}">${fmt1(d.avail)}%</span></td>
+            <td><span class="badge ${oeeBadgeClass(d.oee)}">${fmt1(d.oee)}%</span></td>
             <td style="color:${+d.unplanned_h > 20 ? '#c0392b' : +d.unplanned_h > 10 ? '#e67e22' : 'inherit'};
                 font-weight:${+d.unplanned_h > 20 ? 700 : 400}">${fmtH(d.unplanned_h)}</td>
-            <td><span style="font-weight:700;color:${availCol}">${fmt1(d.avail)}%</span></td>
             <td>${fmt1(d.perf)}%</td>
-            <td><span class="badge ${oeeBadgeClass(d.oee)}">${fmt1(d.oee)}%</span></td>
-            <td>${fmtH(d.planned_down_h)}</td>
-            <td>${fmtH(d.run_h)}</td>
         </tr>`;
     }).join('');
 }
