@@ -1,39 +1,86 @@
 // oee.js - Availability & OEE performance page (maintenance focus)
 
 let oeeQuickFilter = 4;
-let oeeTrendPeriod = null; // e.g. "2025-2026"
+let oeeTrendPeriod = null;
+let _weekYearCache = null; // { weekLabel -> {year, month} }
 
-// ── WEEK LABEL PARSING ────────────────────────────────────────────────────────
-function parseWeekToYearMonth(label) {
-    const s = String(label).trim();
-    const m = s.match(/wk\s*(\d+)\s*(\d{2,4})/i);
-    if (m) {
-        const wk  = parseInt(m[1]);
-        let   yr  = parseInt(m[2]);
-        if (yr < 100) yr += 2000;
-        const jan4 = new Date(yr, 0, 4);
-        const dow  = jan4.getDay() || 7;
+// ── WEEK → YEAR/MONTH INFERENCE ───────────────────────────────────────────────
+// Processes all weeks in state.weeks in order to assign years even when
+// the label is just "Wk 15" with no year embedded.
+function buildWeekYearMap() {
+    if (_weekYearCache) return _weekYearCache;
+    const map = {};
+    const today = new Date();
+    const allWks = state.weeks || [];
+
+    // Try to find an explicit year anchor in any label
+    let anchorYear = null;
+    for (const w of allWks) {
+        const m = String(w).match(/\b(20\d{2})\b/);
+        if (m) { anchorYear = parseInt(m[1]); break; }
+    }
+
+    // If no explicit year found, infer from week numbers
+    if (!anchorYear) {
+        const nums = allWks.map(w => {
+            const m = String(w).match(/wk\s*(\d+)/i);
+            return m ? parseInt(m[1]) : null;
+        }).filter(n => n !== null);
+        const maxWk = nums.length ? Math.max(...nums) : 0;
+        // If we have weeks going up to ~40+ the sequence likely starts last year
+        anchorYear = maxWk > 30 ? today.getFullYear() - 1 : today.getFullYear();
+    }
+
+    let currentYear = anchorYear;
+    let prevWkNum   = null;
+
+    for (const w of allWks) {
+        const s      = String(w).trim();
+        const wkMatch = s.match(/wk\s*(\d+)/i);
+        if (!wkMatch) { map[w] = null; continue; }
+
+        const wkNum = parseInt(wkMatch[1]);
+
+        // Explicit year overrides
+        const yrMatch = s.match(/\b(20\d{2})\b/);
+        if (yrMatch) {
+            currentYear = parseInt(yrMatch[1]);
+        } else if (prevWkNum !== null && wkNum < prevWkNum - 20) {
+            // Week number rolled over → new year
+            currentYear++;
+        }
+
+        // ISO week → calendar date
+        const jan4     = new Date(currentYear, 0, 4);
+        const dow      = jan4.getDay() || 7;
         const week1Mon = new Date(jan4);
         week1Mon.setDate(jan4.getDate() - (dow - 1));
-        const weekMon = new Date(week1Mon);
-        weekMon.setDate(week1Mon.getDate() + (wk - 1) * 7);
-        return { year: weekMon.getFullYear(), month: weekMon.getMonth() };
+        const weekMon  = new Date(week1Mon);
+        weekMon.setDate(week1Mon.getDate() + (wkNum - 1) * 7);
+
+        map[w]     = { year: weekMon.getFullYear(), month: weekMon.getMonth() };
+        prevWkNum  = wkNum;
     }
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) return { year: d.getFullYear(), month: d.getMonth() };
-    return null;
+
+    _weekYearCache = map;
+    return map;
+}
+
+function getWeekYM(label) {
+    return buildWeekYearMap()[label] || null;
 }
 
 function weekToPeriodKey(label) {
-    const ym = parseWeekToYearMonth(label);
+    const ym = getWeekYM(label);
     if (!ym) return null;
     const { year, month } = ym;
-    const start = month >= 3 ? year : year - 1; // April = month 3
+    const start = month >= 3 ? year : year - 1; // April starts period
     return `${start}-${start + 1}`;
 }
 
 // ── RENDER PAGE ───────────────────────────────────────────────────────────────
 function renderOEEPage() {
+    _weekYearCache = null; // reset cache on page render
     const select = document.getElementById('weekSelect');
     if (select) {
         select.innerHTML = state.weeks.map(w =>
@@ -46,21 +93,20 @@ function renderOEEPage() {
 }
 
 function renderOEEKPIs() {
-    const wk = state.currentWeek;
-    const data = wk ? (state.oeeData[wk] || []) : [];
+    const wk     = state.currentWeek;
+    const data   = wk ? (state.oeeData[wk] || []) : [];
     const active = data.filter(d => +d.net_avail_h > 0);
 
-    const avgAvail  = active.length ? active.reduce((s, d) => s + (+d.avail), 0)  / active.length : 0;
-    const avgOEE    = active.length ? active.reduce((s, d) => s + (+d.oee), 0)    / active.length : 0;
-    const avgPerf   = active.length ? active.reduce((s, d) => s + (+d.perf), 0)   / active.length : 0;
-    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
-    const wcTarget  = state.wcTarget || 65;
+    const avgAvail   = active.length ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
+    const avgOEE     = active.length ? active.reduce((s, d) => s + (+d.oee),   0) / active.length : 0;
+    const avgPerf    = active.length ? active.reduce((s, d) => s + (+d.perf),  0) / active.length : 0;
+    const totalUnpl  = data.reduce((s, d) => s + (+d.unplanned_h), 0);
+    const wcTarget   = state.wcTarget || 65;
     const aboveAvail = active.filter(d => +d.avail >= wcTarget).length;
-    const availCol  = avgAvail >= wcTarget ? '#27ae60' : avgAvail >= wcTarget * 0.95 ? '#e67e22' : '#c0392b';
+    const availCol   = avgAvail >= wcTarget ? '#27ae60' : avgAvail >= wcTarget * 0.95 ? '#e67e22' : '#c0392b';
 
     const grid = document.getElementById('oeeKpiGrid');
     if (!grid) return;
-
     grid.innerHTML = `
         <div class="kpi-card" style="border-left-color:${availCol}">
             <div class="kpi-label">Equipment Avg Availability</div>
@@ -103,18 +149,28 @@ function renderOEETrendChart() {
 
     const target = state.wcTarget || 65;
 
-    // ── Detect all periods ────────────────────────────────────────────────────
+    // Build year map for all weeks
+    buildWeekYearMap();
+
+    // Detect periods
     const periodSet = new Set();
     weeks.forEach(w => { const p = weekToPeriodKey(w); if (p) periodSet.add(p); });
     const periods = [...periodSet].sort();
 
-    if (!oeeTrendPeriod || !periods.includes(oeeTrendPeriod)) {
-        oeeTrendPeriod = periods[periods.length - 1] || null;
+    // Fallback if no periods detected (no year info at all)
+    if (!periods.length) {
+        container.innerHTML = `<div class="card" style="padding:20px;text-align:center;color:#aaa">
+            Unable to determine year from week labels. Please include the year in week labels (e.g. "Wk 15 2026").</div>`;
+        return;
     }
 
-    // ── Monthly buckets (Apr … Mar) ───────────────────────────────────────────
+    if (!oeeTrendPeriod || !periods.includes(oeeTrendPeriod)) {
+        oeeTrendPeriod = periods[periods.length - 1];
+    }
+
+    // Monthly buckets Apr…Mar
     const MONTH_NAMES = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-    const [pyStart] = (oeeTrendPeriod || '2025-2026').split('-').map(Number);
+    const [pyStart]   = oeeTrendPeriod.split('-').map(Number);
 
     const monthBuckets = {};
     MONTH_NAMES.forEach((_, idx) => {
@@ -124,7 +180,7 @@ function renderOEETrendChart() {
     });
 
     weeks.filter(w => weekToPeriodKey(w) === oeeTrendPeriod).forEach(w => {
-        const ym = parseWeekToYearMonth(w);
+        const ym = getWeekYM(w);
         if (!ym) return;
         const key = `${ym.year}-${ym.month}`;
         if (!monthBuckets[key]) return;
@@ -150,9 +206,17 @@ function renderOEETrendChart() {
     const perfPts    = monthKeys.map(k => avg(monthBuckets[k].perf));
     const qualityPts = monthKeys.map(k => avg(monthBuckets[k].quality));
 
-    const febIdx = MONTH_NAMES.indexOf('Feb'); // index 10
+    const febIdx = MONTH_NAMES.indexOf('Feb'); // 10
 
-    // ── SVG layout ────────────────────────────────────────────────────────────
+    // Check if any data at all
+    const hasData = availPts.some(v => v !== null);
+    if (!hasData) {
+        // Fallback — show all weeks without grouping as a simple line chart
+        renderOEESimpleTrend(container, target, periods);
+        return;
+    }
+
+    // SVG
     const W = 880, H = 300;
     const padL = 50, padR = 20, padT = 24, padB = 50;
     const chartW = W - padL - padR;
@@ -164,7 +228,7 @@ function renderOEETrendChart() {
     function xCenter(i) { return padL + i * barW + barW / 2; }
     function yOf(v)     { return padT + chartH - (Math.min(v, 100) / 100) * chartH; }
 
-    // Feb 2026 shading
+    // Feb shading
     let febShade = '';
     if (oeeTrendPeriod === '2025-2026') {
         const x1 = padL + febIdx * barW;
@@ -174,10 +238,10 @@ function renderOEETrendChart() {
             <text x="${x1 + 4}" y="${padT + 13}" font-size="9" fill="#95C11F" font-weight="700">Since Feb 2026</text>`;
     }
 
-    // Grid & Y labels
+    // Grid
     let gridSvg = '';
     [0, 20, 40, 60, 80, 100].forEach(pct => {
-        const y = yOf(pct);
+        const y  = yOf(pct);
         const isT = pct === target;
         gridSvg += `
             <line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"
@@ -192,13 +256,12 @@ function renderOEETrendChart() {
     }
 
     // X labels
-    let xLabelsSvg = MONTH_NAMES.map((m, i) =>
-        `<text x="${xCenter(i)}" y="${H - padB + 16}" text-anchor="middle"
-            font-size="10" fill="#666">${m}</text>`
+    const xLabelsSvg = MONTH_NAMES.map((m, i) =>
+        `<text x="${xCenter(i)}" y="${H - padB + 16}" text-anchor="middle" font-size="10" fill="#666">${m}</text>`
     ).join('');
 
     // OEE bars
-    let barsSvg = oeePts.map((v, i) => {
+    const barsSvg = oeePts.map((v, i) => {
         if (v === null) return '';
         const bh  = (v / 100) * chartH;
         const bx  = padL + i * barW + barPad;
@@ -220,10 +283,7 @@ function renderOEETrendChart() {
                     stroke-linejoin="round" stroke-linecap="round"/>`;
             seg = [];
         };
-        pts.forEach((v, i) => {
-            if (v !== null) seg.push(`${xCenter(i)},${yOf(v)}`);
-            else flush();
-        });
+        pts.forEach((v, i) => { if (v !== null) seg.push(`${xCenter(i)},${yOf(v)}`); else flush(); });
         flush();
         pts.forEach((v, i) => {
             if (v !== null)
@@ -284,7 +344,7 @@ function renderOEETrendChart() {
                 Quality %
             </span>
             <span style="display:flex;align-items:center;gap:5px">
-                <span style="width:24px;height:1.5px;background:#c0392b;border-radius:2px;display:inline-block"></span>
+                <span style="width:24px;height:1.5px;background:#c0392b;display:inline-block"></span>
                 Target ${target}%
             </span>
             ${oeeTrendPeriod === '2025-2026' ? `<span style="display:flex;align-items:center;gap:5px">
@@ -296,8 +356,93 @@ function renderOEETrendChart() {
     </div>`;
 }
 
+// Fallback: simple weekly line chart when monthly grouping yields no data
+function renderOEESimpleTrend(container, target, periods) {
+    const weeks  = state.weeks;
+    const W = 880, H = 280, padL = 50, padR = 20, padT = 24, padB = 50;
+    const chartW = W - padL - padR, chartH = H - padT - padB;
+    const n = weeks.length;
+    const xStep = chartW / Math.max(n - 1, 1);
+
+    function xOf(i) { return padL + i * xStep; }
+    function yOf(v) { return padT + chartH - (Math.min(v, 100) / 100) * chartH; }
+
+    const availPts = weeks.map(w => {
+        const d = state.oeeData[w] || [];
+        const a = d.filter(x => +x.net_avail_h > 0);
+        return a.length ? a.reduce((s, x) => s + +x.avail, 0) / a.length : null;
+    });
+    const oeePts = weeks.map(w => {
+        const d = state.oeeData[w] || [];
+        const a = d.filter(x => +x.oee > 0);
+        return a.length ? a.reduce((s, x) => s + +x.oee, 0) / a.length : null;
+    });
+
+    let gridSvg = '';
+    [0, 20, 40, 60, 80, 100].forEach(pct => {
+        const y = yOf(pct), isT = pct === target;
+        gridSvg += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
+            stroke="${isT ? '#c0392b' : '#f0f0f0'}" stroke-width="${isT ? 1.5 : 1}"
+            stroke-dasharray="${isT ? '6,3' : ''}"/>
+            <text x="${padL-5}" y="${y+4}" text-anchor="end" font-size="10"
+            fill="${isT ? '#c0392b' : '#bbb'}" font-weight="${isT ? 700 : 400}">${pct}%</text>`;
+    });
+
+    const xLabelsSvg = weeks.map((w, i) => {
+        if (n > 20 && i % 4 !== 0) return '';
+        const x = xOf(i), lbl = String(w).replace('Wk ', 'W').slice(0, 8);
+        return `<text x="${x}" y="${H - padB + 16}" text-anchor="end"
+            transform="rotate(-35,${x},${H - padB + 16})" font-size="9" fill="#888">${lbl}</text>`;
+    }).join('');
+
+    function buildLine(pts, col, strokeW, dash = '') {
+        let out = '', seg = [];
+        const flush = () => {
+            if (seg.length > 1) out += `<polyline points="${seg.join(' ')}" fill="none" stroke="${col}"
+                stroke-width="${strokeW}" stroke-dasharray="${dash}" stroke-linejoin="round"/>`;
+            seg = [];
+        };
+        pts.forEach((v, i) => { if (v !== null) seg.push(`${xOf(i)},${yOf(v)}`); else flush(); });
+        flush();
+        pts.forEach((v, i) => { if (v !== null)
+            out += `<circle cx="${xOf(i)}" cy="${yOf(v)}" r="3" fill="${col}" stroke="#fff" stroke-width="1.5"/>`;
+        });
+        return out;
+    }
+
+    const tabsHtml = periods.map(p =>
+        `<button onclick="setOEETrendPeriod('${p}')"
+            style="padding:5px 14px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;
+                   border:1px solid ${p === oeeTrendPeriod ? '#243547' : '#ddd'};
+                   background:${p === oeeTrendPeriod ? '#243547' : '#fff'};
+                   color:${p === oeeTrendPeriod ? '#fff' : '#666'}">${p}</button>`
+    ).join('');
+
+    const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+        ${gridSvg}
+        ${buildLine(oeePts, '#243547', 1.5, '5,3')}
+        ${buildLine(availPts, '#95C11F', 3.5)}
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+        ${xLabelsSvg}
+    </svg>`;
+
+    container.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+        <div class="card-header" style="margin-bottom:12px">
+            <span class="card-title">📈 OEE — By Component (weekly)</span>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${tabsHtml}</div>
+        </div>
+        <div style="overflow-x:auto">${svg}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:8px;">
+            Tip: include year in week labels (e.g. "Wk 15 2026") to enable monthly view with year tabs.
+        </div>
+    </div>`;
+}
+
 function setOEETrendPeriod(p) {
     oeeTrendPeriod = p;
+    _weekYearCache = null;
     renderOEETrendChart();
 }
 
