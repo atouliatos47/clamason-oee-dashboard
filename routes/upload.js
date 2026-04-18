@@ -348,4 +348,36 @@ router.post('/reset', async (req, res) => {
   }
 });
 
+// ── POST /api/upload/reset-sfc ───────────────────────────────────────────────
+router.post('/reset-sfc', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('TRUNCATE TABLE oee_data RESTART IDENTITY CASCADE');
+      res.json({ success: true });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Reset SFC error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/upload/reset-agility ───────────────────────────────────────────
+router.post('/reset-agility', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('TRUNCATE TABLE agility_data RESTART IDENTITY CASCADE');
+      res.json({ success: true });
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Reset Agility error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

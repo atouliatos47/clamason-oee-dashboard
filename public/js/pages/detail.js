@@ -90,7 +90,7 @@ function renderDetail(d) {
             <div class="detail-header">
                 <div>
                     <div class="detail-name">${d.machine}</div>
-                    <div class="detail-sub">OEE Performance — ${state.weeks.join(', ')}</div>
+                    <div class="detail-sub">Availability Performance — ${state.weeks.join(', ')}</div>
                 </div>
                 <div class="detail-stats">
                     <div class="detail-stat">
@@ -335,7 +335,7 @@ function renderDetail(d) {
             <div class="detail-header">
                 <div>
                     <div class="detail-name">${d.machine}</div>
-                    <div class="detail-sub">OEE Performance — ${state.weeks.join(', ')}</div>
+                    <div class="detail-sub">Availability Performance — ${state.weeks.join(', ')}</div>
                 </div>
                 <div class="detail-stats">
                     <div class="detail-stat">
@@ -358,24 +358,26 @@ function renderDetail(d) {
             </div>
 
             <div class="card">
-                <div class="card-header"><span class="card-title">Weekly OEE trend</span></div>
+                <div class="card-header"><span class="card-title">Weekly Availability trend</span></div>
                 <div style="margin-bottom:16px">${bars}</div>
                 <div class="table-wrap">
                     <table>
                         <thead><tr>
-                            <th>Week</th><th>OEE %</th><th>Avail %</th>
-                            <th>Perf %</th><th>Quality %</th><th>Unplanned h</th><th>Parts</th>
+                            <th>Week</th><th>Avail %</th><th>OEE %</th>
+                            <th>Perf %</th><th>Unplanned h</th><th>Planned Down</th><th>Run Time</th>
                         </tr></thead>
                         <tbody>
-                            ${history.map(h => `<tr>
+                            ${history.map(h => {
+                                const ac = +h.avail >= (state.wcTarget||65) ? '#27ae60' : +h.avail >= (state.wcTarget||65)*0.9 ? '#e67e22' : +h.avail > 0 ? '#c0392b' : '#ccc';
+                                return `<tr>
                                 <td style="font-weight:700">${h.week}</td>
+                                <td style="font-weight:700;color:${ac}">${fmt1(h.avail)}%</td>
                                 <td><span class="badge ${oeeBadgeClass(h.oee)}">${fmt1(h.oee)}%</span></td>
-                                <td>${fmt1(h.avail)}%</td>
                                 <td>${fmt1(h.perf)}%</td>
-                                <td>${fmt1(h.quality)}%</td>
                                 <td style="color:${+h.unplanned_h > 20 ? '#c0392b' : 'inherit'}">${fmtH(h.unplanned_h)}</td>
-                                <td>${fmtN(h.total_parts)}</td>
-                            </tr>`).join('')}
+                                <td>${fmtH(h.planned_down_h)}</td>
+                                <td>${fmtH(h.run_h)}</td>
+                            </tr>`;}).join('')}
                         </tbody>
                     </table>
                 </div>
