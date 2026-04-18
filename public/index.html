@@ -81,7 +81,7 @@
     <!-- ═══ PAGE: OEE TABLE ═══ -->
     <div id="page-oee" class="page">
       <div class="kpi-grid" id="oeeKpiGrid" style="margin-bottom:16px;"></div>
-      <div id="oeeTrendChart"></div>
+      <div id="oeeBarsChart" class="card" style="margin-bottom:16px;padding:16px 20px;"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;" id="quickFilters">
           <button class="week-tab active" onclick="setQuickFilter(4,this)">Last 4 wks</button>
@@ -96,17 +96,7 @@
       <div class="filters">
         <label>Search:</label>
         <input type="text" id="oeeSearch" placeholder="Machine name..." style="width:180px" oninput="renderOEETable()">
-        <select id="oeeTypeFilter" onchange="renderOEETable()">
-          <option value="">All types</option>
-          <option value="Bruderer">Bruderer</option>
-          <option value="Chin Fong">Chin Fong</option>
-          <option value="Finzer">Finzer</option>
-          <option value="Heenan">Heenan</option>
-          <option value="HME">HME</option>
-          <option value="Kaiser">Kaiser</option>
-          <option value="Bihler">Bihler</option>
-          <option value="Rockwell">Rockwell</option>
-        </select>
+
         <select id="oeeBandFilter" onchange="renderOEETable()">
           <option value="">All Avail</option>
           <option value="good">≥85%</option>
