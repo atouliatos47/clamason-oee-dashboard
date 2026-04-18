@@ -28,16 +28,19 @@ function trafficLight(actual, target, higherIsBetter = true) {
 }
 
 function editableTarget(key, value, unit) {
-    return `<span
-        contenteditable="true"
-        onblur="updateTarget('${key}', this.innerText)"
-        style="cursor:text;border-bottom:2px dashed #95C11F;padding:0 4px;color:#243547;font-weight:700;font-size:18px;"
-        title="Click to edit target"
-    >${value}${unit}</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:2px;">
+        <input type="number" value="${value}"
+            onchange="updateTarget('${key}', this.value)"
+            onkeydown="if(event.key==='Enter')this.blur()"
+            style="width:65px;font-size:18px;font-weight:700;color:#243547;
+                   border:none;border-bottom:2px dashed #95C11F;background:transparent;
+                   text-align:center;outline:none;padding:0 2px;"
+        /><span style="font-size:18px;font-weight:700;color:#243547;">${unit}</span>
+    </span>`;
 }
 
 function updateTarget(key, rawVal) {
-    const num = parseFloat(rawVal.replace(/[^0-9.]/g, ''));
+    const num = parseFloat(rawVal);
     if (!isNaN(num) && num > 0) {
         saveTarget(key, num);
         if (key === 'avail') state.wcTarget = num;
