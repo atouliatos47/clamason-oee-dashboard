@@ -7,7 +7,7 @@ function drawSemiGauge(value, target, label, W, H) {
     W = W || 130; H = H || 88;
     const cx = W / 2, cy = H - 14;
     const r  = Math.min(cx - 8, cy - 4);
-    const pct = Math.max(0, Math.min(100, +value || 0));
+    const pct = Math.max(0, Math.min(99.9, +value || 0)); // cap at 99.9 to avoid degenerate arc
     const col = pct >= target ? '#95C11F' : pct >= target * 0.82 ? '#e67e22' : '#c0392b';
 
     function pt(v) {
@@ -17,7 +17,7 @@ function drawSemiGauge(value, target, label, W, H) {
     const p0 = pt(0), pe = pt(pct);
     const bg = `M ${p0.x} ${p0.y} A ${r} ${r} 0 0 1 ${+(cx+r).toFixed(1)} ${cy}`;
     const arc = pct > 0
-        ? `M ${p0.x} ${p0.y} A ${r} ${r} 0 ${pct > 50 ? 1 : 0} 1 ${pe.x} ${pe.y}`
+        ? `M ${p0.x} ${p0.y} A ${r} ${r} 0 0 1 ${pe.x} ${pe.y}` // always largeArc=0 for 0-180° gauge
         : '';
 
     // Target tick
@@ -49,10 +49,11 @@ function renderFleetDonut(oee, avail, target) {
 
     const col = oee >= target ? '#95C11F' : oee >= target * 0.82 ? '#e67e22' : '#c0392b';
     const ac  = avail >= target ? '#95C11F' : avail >= target * 0.82 ? '#e67e22' : '#c0392b';
-    const p0  = bigPt(0), pe = bigPt(oee);
+    const oeeC = Math.min(oee, 99.9);
+    const p0  = bigPt(0), pe = bigPt(oeeC);
     const bg  = `M ${p0.x} ${p0.y} A ${r} ${r} 0 0 1 ${+(cx+r).toFixed(1)} ${cy}`;
-    const arc = oee > 0
-        ? `M ${p0.x} ${p0.y} A ${r} ${r} 0 ${oee > 50 ? 1 : 0} 1 ${pe.x} ${pe.y}`
+    const arc = oeeC > 0
+        ? `M ${p0.x} ${p0.y} A ${r} ${r} 0 0 1 ${pe.x} ${pe.y}` // always largeArc=0
         : '';
 
     const ta  = (180 - target * 1.8) * Math.PI / 180;
