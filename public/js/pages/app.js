@@ -1,7 +1,6 @@
 // app.js - Main application router and initialization
 
 function showPage(page, param = null) {
-    // Track previous page for back button
     const currentActive = document.querySelector('.page.active');
     if (currentActive) {
         const currentId = currentActive.id.replace('page-', '');
@@ -10,19 +9,15 @@ function showPage(page, param = null) {
         }
     }
 
-    // Update nav active state
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const activeNav = document.querySelector(`.nav-item[onclick*="'${page}'"]`);
     if (activeNav) activeNav.classList.add('active');
 
-    // Hide all pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
 
-    // Show selected page
     const target = document.getElementById('page-' + page);
     if (target) target.classList.add('active');
 
-    // Render page content
     if (page === 'dashboard') {
         renderDashboard();
     } else if (page === 'oee') {
@@ -35,6 +30,8 @@ function showPage(page, param = null) {
         if (detailPage) detailPage.classList.add('active');
     } else if (page === 'kpi') {
         renderKPIBoard();
+    } else if (page === 'upload') {
+        loadMachineMapping();
     }
 }
 
@@ -51,7 +48,18 @@ async function init() {
             if (targets?.avail?.value) state.wcTarget = targets.avail.value;
         }
     } catch(e) {}
+
     await loadAllData();
+
+    // Load machine mapping into state
+    try {
+        const res = await fetch('/api/upload/machine-mapping');
+        const data = await res.json();
+        state.machineMapping = data.mappings || [];
+    } catch(e) {
+        state.machineMapping = [];
+    }
+
     showPage('dashboard');
 }
 

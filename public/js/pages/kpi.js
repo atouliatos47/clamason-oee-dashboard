@@ -278,13 +278,16 @@ function renderKPIBoard() {
             ${top5.map((m, i) => {
         const assetMTTR = +m.breakdown_count > 0
             ? Math.round((+m.downtime_hrs / +m.breakdown_count) * 10) / 10 : 0;
-        // Match Agility name to SFC name via ISI number or partial name
+        // Use machine_mapping table first, then fall back to ISI number match
+        const mapping = (state.machineMapping || []).find(mp =>
+            mp.agility_name === m.name && mp.sfc_name);
+        const sfcName = mapping ? mapping.sfc_name : null;
         const isiMatch = m.name.replace(/\s/g,'').match(/ISI(\d+)/i);
         const isiNum = isiMatch ? isiMatch[1] : null;
         const assetRunH = state.weeks.reduce((s, w) => {
             const row = (state.oeeData[w] || []).find(d => {
+                if (sfcName) return d.machine === sfcName;
                 if (isiNum) return d.machine.replace(/\s/g,'').toUpperCase().includes('ISI' + isiNum);
-                // fallback: try first word match (e.g. "BIHLER" matches "Bihler")
                 const firstWord = m.name.split(/[\s|]+/).filter(x=>x.length>2)[0] || '';
                 return d.machine.toLowerCase().includes(firstWord.toLowerCase());
             });

@@ -146,3 +146,73 @@ async function uploadAgility() {
         }
     });
 });
+
+// ── MACHINE MAPPING ───────────────────────────────────────────────────────────
+async function loadMachineMapping() {
+    const el = document.getElementById('machineMappingBody');
+    if (!el) return;
+    el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Loading...</td></tr>';
+    try {
+        const res = await fetch('/api/upload/machine-mapping');
+        const data = await res.json();
+        state.machineMapping = data.mappings;
+
+        if (!data.agilityNames.length) {
+            el.innerHTML = '<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Upload Agility data first to see machines here</td></tr>';
+            return;
+        }
+
+        const mappingIndex = {};
+        data.mappings.forEach(m => { mappingIndex[m.agility_name] = m.sfc_name || ''; });
+
+        el.innerHTML = data.agilityNames.map(name => {
+            const currentSfc = mappingIndex[name] || '';
+            const opts = `<option value="">— Not in SFC —</option>` +
+                data.sfcNames.map(s => `<option value="${s}" ${s === currentSfc ? 'selected' : ''}>${s}</option>`).join('');
+            return `<tr style="border-bottom:1px solid #f0f0f0">
+                <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#243547">${name}</td>
+                <td style="padding:10px 14px;font-size:13px;color:#888">→</td>
+                <td style="padding:10px 14px">
+                    <select data-agility="${name.replace(/"/g,'&quot;')}"
+                        style="width:100%;border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;color:#243547;background:#fff">
+                        ${opts}
+                    </select>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (err) {
+        el.innerHTML = `<tr><td colspan="3" style="padding:16px;color:#c0392b">❌ ${err.message}</td></tr>`;
+    }
+}
+
+async function saveMachineMapping() {
+    const rows = document.querySelectorAll('#machineMappingBody select');
+    const mappings = Array.from(rows).map(sel => ({
+        agility_name: sel.dataset.agility,
+        sfc_name: sel.value || null,
+    }));
+    const btn = document.getElementById('saveMappingBtn');
+    const status = document.getElementById('mappingStatus');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+        const res = await fetch('/api/upload/machine-mapping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mappings }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        // Update state for immediate use
+        state.machineMapping = mappings.filter(m => m.sfc_name);
+        status.style.color = '#27ae60';
+        status.textContent = `✅ ${json.saved} mappings saved`;
+        showToast('✅ Machine mappings saved', 'success');
+    } catch (err) {
+        status.style.color = '#c0392b';
+        status.textContent = '❌ ' + err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Save Mappings';
+    }
+}

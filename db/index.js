@@ -46,6 +46,15 @@ async function initDB() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS machine_mapping (
+        id           SERIAL PRIMARY KEY,
+        agility_name VARCHAR(150) NOT NULL UNIQUE,
+        sfc_name     VARCHAR(100),
+        updated_at   TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     console.log('✅ Database tables ready');
   } finally {
     client.release();
