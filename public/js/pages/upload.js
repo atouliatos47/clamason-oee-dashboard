@@ -27,9 +27,14 @@ async function uploadSFC() {
         return;
     }
     if (files.length === 1 && !weekLabel) {
-        status.style.color = '#c0392b';
-        status.textContent = '❌ Please enter a week label for single file upload';
-        return;
+        const match = files[0].name.match(/(\d+)/);
+        if (match) {
+            weekLabel = `Wk ${match[1]}`;
+        } else {
+            status.style.color = '#c0392b';
+            status.textContent = '❌ Could not detect week from filename — please enter a label';
+            return;
+        }
     }
 
     const btn = document.querySelector('button[onclick="uploadSFC()"]');
@@ -85,7 +90,7 @@ async function uploadAgility() {
 
     const now = new Date();
     const from = new Date(now.getFullYear() - 1, now.getMonth());
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const periodLabel = `${months[from.getMonth()]} ${from.getFullYear()} - ${months[now.getMonth()]} ${now.getFullYear()}`;
 
     const btn = document.querySelector('button[onclick="uploadAgility()"]');
@@ -118,7 +123,7 @@ async function uploadAgility() {
 }
 
 // Drag and drop handlers
-['sfcDropZone','agilityDropZone'].forEach(id => {
+['sfcDropZone', 'agilityDropZone'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
