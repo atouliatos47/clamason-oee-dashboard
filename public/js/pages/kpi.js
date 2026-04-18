@@ -92,8 +92,8 @@ function renderKPIBoard() {
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
 
-    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
-    const fleetMTBF = totalBDs > 0 && totalRunH > 0
+    const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
+    const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
     const avgTPM = maint.length > 0 ? Math.round((totalTPM / maint.length) * 10) / 10 : 0;
 
@@ -125,8 +125,8 @@ function renderKPIBoard() {
     // Maintenance KPI rows
     const maintRows = [
         { key: 'avail', label: 'Availability %', actual: avgAvail, unit: '%', higher: true },
-        { key: 'maxMTTR', label: 'Fleet MTTR', actual: fleetMTTR, unit: 'h', higher: false },
-        { key: 'minMTBF', label: 'Fleet MTBF', actual: fleetMTBF, unit: 'h', higher: true },
+        { key: 'maxMTTR', label: 'Equipment MTTR', actual: equipMTTR, unit: 'h', higher: false },
+        { key: 'minMTBF', label: 'Equipment MTBF', actual: equipMTBF, unit: 'h', higher: true },
         { key: 'maxDowntime', label: 'Annual Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
         { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },

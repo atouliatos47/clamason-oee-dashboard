@@ -22,8 +22,8 @@ function exportKPIPDF() {
     const totalRunH = state.weeks.reduce((s,w)=>
         s+(state.oeeData[w]||[]).reduce((ss,d)=>ss+(+d.run_h||0),0),0);
 
-    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT/totalBDs)*10)/10 : 0;
-    const fleetMTBF = totalBDs > 0 && totalRunH > 0
+    const equipMTTR = totalBDs > 0 ? Math.round((totalDT/totalBDs)*10)/10 : 0;
+    const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH/totalBDs)*10)/10 : 0;
     const avgTPM = maint.length > 0 ? Math.round((totalTPM/maint.length)*10)/10 : 0;
 
@@ -216,8 +216,8 @@ ${sectionLabel(`🔧 Maintenance KPIs — ${period} · from Agility + SFC`)}
     </thead>
     <tbody>
         ${mRow('Availability %',     avgAvail,            'avail',       '%', true,  fmt1(avgAvail)+'%')}
-        ${mRow('Fleet MTTR',         fleetMTTR,           'maxMTTR',     'h', false, fleetMTTR+'h')}
-        ${mRow('Fleet MTBF',         fleetMTBF,           'minMTBF',     'h', true,  fleetMTBF>0?fleetMTBF+'h':'—')}
+        ${mRow('Equipment MTTR',         equipMTTR,           'maxMTTR',     'h', false, equipMTTR+'h')}
+        ${mRow('Equipment MTBF',         equipMTBF,           'minMTBF',     'h', true,  equipMTBF>0?equipMTBF+'h':'—')}
         ${mRow('Annual Downtime',    Math.round(totalDT), 'maxDowntime', 'h', false, Math.round(totalDT)+'h')}
         ${mRow('Total Breakdowns',   totalBDs,            'maxBDs',      '',  false, String(totalBDs))}
         ${mRow('Avg TPM per Asset',  avgTPM,              'tpmTarget',   '',  true,  fmt1(avgTPM))}

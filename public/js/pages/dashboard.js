@@ -14,11 +14,11 @@ function renderDashboard() {
     const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
-    const fleetMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
-    const fleetMTBF = totalBDs > 0 && totalRunH > 0
+    const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
+    const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
-    const mttrCol = fleetMTTR <= 4 ? '#27ae60' : fleetMTTR <= 8 ? '#e67e22' : '#c0392b';
-    const mtbfCol = fleetMTBF >= 200 ? '#27ae60' : fleetMTBF >= 100 ? '#e67e22' : '#c0392b';
+    const mttrCol = equipMTTR <= 4 ? '#27ae60' : equipMTTR <= 8 ? '#e67e22' : '#c0392b';
+    const mtbfCol = equipMTBF >= 200 ? '#27ae60' : equipMTBF >= 100 ? '#e67e22' : '#c0392b';
 
     // Availability from SFC
     const avgAvail = active.length
@@ -42,7 +42,7 @@ function renderDashboard() {
 
         <div class="kpi-card" style="border-left-color:${availCol};cursor:pointer"
             onclick="showPage('kpi')">
-            <div class="kpi-label">Fleet Availability</div>
+            <div class="kpi-label">Equipment Availability</div>
             <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
             <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'}</div>
         </div>
@@ -59,14 +59,14 @@ function renderDashboard() {
         </div>
         <div class="kpi-card" style="border-left-color:${mttrCol};cursor:pointer"
             onclick="showPage('kpi')">
-            <div class="kpi-label">Fleet MTTR</div>
-            <div class="kpi-value" style="color:${mttrCol}">${fleetMTTR}h</div>
+            <div class="kpi-label">Equipment MTTR</div>
+            <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
             <div class="kpi-sub">target &lt;4h · mean time to repair</div>
         </div>
         <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
             onclick="showPage('kpi')">
-            <div class="kpi-label">Fleet MTBF</div>
-            <div class="kpi-value" style="color:${mtbfCol}">${fleetMTBF > 0 ? fleetMTBF + 'h' : '—'}</div>
+            <div class="kpi-label">Equipment MTBF</div>
+            <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
             <div class="kpi-sub">target &gt;200h · mean time between failures</div>
         </div>
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
@@ -83,7 +83,7 @@ function renderDashboard() {
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Overall OEE</div>
             <div class="kpi-value" style="font-size:18px;color:${avgOEE >= state.wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">fleet avg · ${wk || '—'}</div>
+            <div class="kpi-sub">equip avg · ${wk || '—'}</div>
         </div>
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Unplanned Downtime</div>
