@@ -43,6 +43,14 @@ function goBack() {
 }
 
 async function init() {
+    // Load saved availability target from KPI Board settings
+    try {
+        const saved = localStorage.getItem('clamason_kpi_targets');
+        if (saved) {
+            const targets = JSON.parse(saved);
+            if (targets?.avail?.value) state.wcTarget = targets.avail.value;
+        }
+    } catch(e) {}
     await loadAllData();
     showPage('dashboard');
 }
