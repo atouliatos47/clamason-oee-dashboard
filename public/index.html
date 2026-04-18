@@ -230,6 +230,38 @@
 
 
 
+      <!-- Machine Mapping Card -->
+      <div class="card" style="margin-top:20px;grid-column:1/-1">
+        <div class="card-header">
+          <span class="card-title">🔗 Machine Name Mapping</span>
+          <span class="card-sub">Link Agility machines to SFC machines for MTBF calculation</span>
+        </div>
+        <p style="font-size:13px;color:#888;margin:0 0 14px">
+          Agility and SFC use different machine names. Map them here so MTBF can be calculated for the Top 5 Assets.
+        </p>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#243547;color:#fff">
+                <th style="padding:10px 14px;text-align:left;font-size:12px">Agility Machine</th>
+                <th style="padding:10px 14px;width:40px"></th>
+                <th style="padding:10px 14px;text-align:left;font-size:12px">SFC Machine</th>
+              </tr>
+            </thead>
+            <tbody id="machineMappingBody">
+              <tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:14px">
+          <button id="saveMappingBtn" onclick="saveMachineMapping()"
+            style="background:#243547;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer">
+            💾 Save Mappings
+          </button>
+          <span id="mappingStatus" style="font-size:13px"></span>
+        </div>
+      </div>
+
       </div>
     </div>
 
