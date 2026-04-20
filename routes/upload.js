@@ -108,7 +108,7 @@ function parseAgility(buffer) {
         labour_hrs: Math.round((parseFloat(row[7]) || 0) * 10) / 10,
         num_jobs: parseInt(row[10]) || 0,
         downtime_hrs: Math.round((parseFloat(row[11]) || 0) * 10) / 10,
-        tpm_count: 0, breakdown_count: 0, breakdowns: [],
+        tpm_count: 0, breakdown_count: 0, breakdowns: [], tpms: [],
       };
     } else if (isJobRow && current) {
       const isTpm = /tpm|preventive|planned service/i.test(c2);
@@ -117,6 +117,11 @@ function parseAgility(buffer) {
       const lc = parseFloat(row[6]) || 0;
       if (isTpm) {
         current.tpm_count++;
+        current.tpms.push({
+          wo: c1, desc: c2.slice(0, 80),
+          labour_hrs: Math.round(lh * 10) / 10,
+          cost_labour: Math.round(lc),
+        });
       } else {
         current.breakdown_count++;
         if (dt > 0 || lh > 0.3) {
@@ -133,6 +138,7 @@ function parseAgility(buffer) {
   if (current) machines.push(current);
   for (const m of machines) {
     m.breakdowns = m.breakdowns.sort((a,b) => b.downtime_hrs - a.downtime_hrs).slice(0, 5);
+    m.tpms = m.tpms.sort((a,b) => b.labour_hrs - a.labour_hrs).slice(0, 10);
   }
   return machines.filter(m => m.num_jobs > 0);
 }
@@ -184,17 +190,17 @@ router.post('/agility', upload.single('file'), async (req, res) => {
         await client.query(`
           INSERT INTO agility_data
             (period_label, code, name, cost_labour, labour_hrs, num_jobs,
-             downtime_hrs, tpm_count, breakdown_count, breakdowns)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+             downtime_hrs, tpm_count, breakdown_count, breakdowns, tpms)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
           ON CONFLICT (period_label, code) DO UPDATE SET
             name=EXCLUDED.name, cost_labour=EXCLUDED.cost_labour,
             labour_hrs=EXCLUDED.labour_hrs, num_jobs=EXCLUDED.num_jobs,
             downtime_hrs=EXCLUDED.downtime_hrs, tpm_count=EXCLUDED.tpm_count,
             breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns,
-            uploaded_at=NOW()
+            tpms=EXCLUDED.tpms, uploaded_at=NOW()
         `, [periodLabel, m.code, m.name, m.cost_labour, m.labour_hrs,
             m.num_jobs, m.downtime_hrs, m.tpm_count, m.breakdown_count,
-            JSON.stringify(m.breakdowns)]);
+            JSON.stringify(m.breakdowns), JSON.stringify(m.tpms)]);
         inserted++;
       }
       res.json({ success: true, period: periodLabel, machines: inserted });
