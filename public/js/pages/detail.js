@@ -70,7 +70,7 @@ function renderTpmCard(t) {
             <div class="bd-hrs" style="color:#6a8c15">${t.labour_hrs}h</div>
             <div class="bd-info">
                 <div class="bd-desc">${t.desc}</div>
-                <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h &nbsp;·&nbsp; Cost: ${fmtK(t.cost_labour)}</div>
+                <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h</div>
             </div>
         </div>`;
 }
