@@ -6,6 +6,32 @@ const { pool } = require('../db');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ── Detect ISO week from a date string (MM/DD/YYYY or similar) ────────────────
+function detectWeekLabel(buffer) {
+  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+  // Scan cells for the first date string like "3/15/2026 12:00:00 AM"
+  for (const row of raw) {
+    for (const cell of row) {
+      if (cell && typeof cell === 'string') {
+        const m = cell.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) {
+          const [, mm, dd, yyyy] = m.map(Number);
+          const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+          const dayNum = d.getUTCDay() || 7;
+          d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+          const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+          const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+          return `Wk ${weekNum}`;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // ── Parse SFC XLS ─────────────────────────────────────────────────────────────
 function parseSFC(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
@@ -146,8 +172,11 @@ function parseAgility(buffer) {
 // ── POST /api/upload/sfc ──────────────────────────────────────────────────────
 router.post('/sfc', upload.single('file'), async (req, res) => {
   try {
-    const weekLabel = req.body.week_label;
-    if (!weekLabel) return res.status(400).json({ error: 'week_label is required' });
+    let weekLabel = req.body.week_label;
+    if (!weekLabel || !weekLabel.trim()) {
+      weekLabel = detectWeekLabel(req.file.buffer);
+      if (!weekLabel) return res.status(400).json({ error: 'Could not auto-detect week from file — please enter a week label manually' });
+    }
     const machines = parseSFC(req.file.buffer);
     if (!machines.length) return res.status(400).json({ error: 'No machine data found in file' });
     const client = await pool.connect();
