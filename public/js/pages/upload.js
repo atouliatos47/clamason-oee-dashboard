@@ -27,17 +27,8 @@ async function uploadSFC() {
         return;
     }
 
-    // Single file with no label — auto-extract week number from filename
-    if (files.length === 1 && !weekLabel) {
-        const match = files[0].name.match(/(\d+)/);
-        if (match) {
-            weekLabel = `Wk ${match[1]}`;
-        } else {
-            status.style.color = '#c0392b';
-            status.textContent = '❌ Could not detect week from filename — please enter a label';
-            return;
-        }
-    }
+    // Single file with no label — let backend auto-detect from file dates
+    // (no filename parsing — just send it through)
 
     const btn = document.querySelector('button[onclick="uploadSFC()"]');
     btn.disabled = true;
@@ -50,19 +41,21 @@ async function uploadSFC() {
 
     for (const file of Array.from(files)) {
         let label = weekLabel;
-        if (files.length > 1) {
+        if (files.length > 1 && !label) {
+            // Try filename first, fall back to backend auto-detect (empty string)
             const match = file.name.match(/(\d+)/);
-            label = match ? `Wk ${match[1]}` : file.name.replace(/\.[^.]+$/, '');
+            if (match) label = `Wk ${match[1]}`;
         }
         const fd = new FormData();
         fd.append('file', file);
-        fd.append('week_label', label);
+        if (label) fd.append('week_label', label);
         try {
             const res = await fetch('/api/upload/sfc', { method: 'POST', body: fd });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error);
             uploaded++;
-            status.textContent = `Uploading... (${uploaded}/${files.length}) — ${label} done`;
+            const shownLabel = label || json.week || '(auto)';
+            status.textContent = `Uploading... (${uploaded}/${files.length}) — ${shownLabel} done`;
         } catch (err) {
             errors.push(`${file.name}: ${err.message}`);
         }
