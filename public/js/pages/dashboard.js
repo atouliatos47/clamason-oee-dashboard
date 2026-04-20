@@ -1,4 +1,4 @@
-// dashboard.js - Maintenance-first dashboard
+// dashboard.js - Maintenance Reliability Dashboard
 
 if (!state.wcTarget) state.wcTarget = 65;
 
@@ -12,11 +12,12 @@ function renderDashboard() {
     const data = wk ? (state.oeeData[wk] || []) : [];
     const active = data.filter(d => +d.oee > 0);
 
-    // Maintenance KPIs
+    // ── MAINTENANCE KPIs (from Agility) ──
     const maint = state.maintData || [];
     const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
     const totalCost = maint.reduce((s, m) => s + (+m.cost_labour), 0);
     const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
+    const totalTPMs = maint.reduce((s, m) => s + (+m.tpm_count), 0);
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
@@ -25,80 +26,103 @@ function renderDashboard() {
     const mttrCol = equipMTTR <= mttrTarget ? '#27ae60' : equipMTTR <= mttrTarget * 1.5 ? '#e67e22' : '#c0392b';
     const mtbfCol = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
 
-    // Availability from SFC
+    // TPM vs Reactive ratio
+    const totalJobs = totalTPMs + totalBDs;
+    const tpmPct = totalJobs > 0 ? Math.round((totalTPMs / totalJobs) * 100) : 0;
+    const tpmRatioCol = tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
+
+    // ── AVAILABILITY & UNPLANNED (from SFC) ──
     const avgAvail = active.length
         ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
     const availCol = avgAvail >= state.wcTarget ? '#27ae60'
         : avgAvail >= state.wcTarget * 0.95 ? '#e67e22' : '#c0392b';
+    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
+    const unplCol = totalUnpl > 200 ? '#c0392b' : totalUnpl > 100 ? '#e67e22' : '#27ae60';
 
-    // Production context
+    // ── PRODUCTION CONTEXT (from SFC) ──
     const avgOEE = active.length
         ? active.reduce((s, d) => s + (+d.oee), 0) / active.length : 0;
-    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
     const totalParts = data.reduce((s, d) => s + (+d.total_parts), 0);
     const period = maint[0]?.period_label || 'Annual';
 
-    // ── YOUR NUMBERS (Maintenance) ──
+    // ── HTML: Reliability-first layout ──
     document.getElementById('kpiGrid').innerHTML = `
-        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
-            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;">
-            🔧 Your Numbers — Maintenance
+        <!-- BAND TITLE -->
+        <div style="grid-column:1/-1;font-size:13px;font-weight:700;color:#243547;
+            text-transform:uppercase;letter-spacing:.8px;margin-bottom:-2px;
+            border-bottom:2px solid #95C11F;padding-bottom:6px;">
+            ⚙️ Equipment Reliability — Maintenance KPIs
         </div>
 
+        <!-- ROW 1: Headline reliability numbers -->
         <div class="kpi-card" style="border-left-color:${availCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment Availability</div>
+            onclick="showPage('oee')">
+            <div class="kpi-label">🔧 Availability</div>
             <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
-            <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'}</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
-            onclick="showPage('maintenance')">
-            <div class="kpi-label">Annual Downtime</div>
-            <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
-            <div class="kpi-sub">${period}</div>
-        </div>
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
-            <div class="kpi-label">Total Breakdowns</div>
-            <div class="kpi-value">${totalBDs}</div>
-            <div class="kpi-sub">recorded this period</div>
+            <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'} · from SFC</div>
         </div>
         <div class="kpi-card" style="border-left-color:${mttrCol};cursor:pointer"
             onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment MTTR</div>
+            <div class="kpi-label">⏱️ MTTR</div>
             <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
-            <div class="kpi-sub">target &lt;${mttrTarget}h · mean time to repair</div>
+            <div class="kpi-sub">mean time to repair · target &lt;${mttrTarget}h</div>
         </div>
         <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
             onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment MTBF</div>
+            <div class="kpi-label">⚙️ MTBF</div>
             <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
-            <div class="kpi-sub">target &gt;${mtbfTarget}h · mean time between failures</div>
+            <div class="kpi-sub">mean time between failures · target &gt;${mtbfTarget}h</div>
         </div>
+        <div class="kpi-card" style="border-left-color:${unplCol};cursor:pointer"
+            onclick="showPage('oee')">
+            <div class="kpi-label">🔴 Unplanned Downtime</div>
+            <div class="kpi-value" style="color:${unplCol}">${fmtH(totalUnpl)}</div>
+            <div class="kpi-sub">this week · from SFC</div>
+        </div>
+
+        <!-- ROW 2: Business impact -->
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
-            <div class="kpi-label">Labour Cost</div>
+            <div class="kpi-label">💷 Reactive Labour Cost</div>
             <div class="kpi-value">${fmtK(totalCost)}</div>
             <div class="kpi-sub">annual maintenance labour</div>
         </div>
-
-        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
-            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;margin-top:8px;">
-            📊 Production Context — shared KPI
+        <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
+            onclick="showPage('maintenance')">
+            <div class="kpi-label">📉 Annual Downtime</div>
+            <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
+            <div class="kpi-sub">${period}</div>
+        </div>
+        <div class="kpi-card" style="border-left-color:${tpmRatioCol};cursor:pointer"
+            onclick="showPage('maintenance')">
+            <div class="kpi-label">🔄 TPM vs Reactive</div>
+            <div class="kpi-value" style="color:${tpmRatioCol}">${tpmPct}%</div>
+            <div class="kpi-sub">${totalTPMs} TPM / ${totalBDs} reactive · target &gt;50%</div>
+        </div>
+        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
+            <div class="kpi-label">🏭 Total Breakdowns</div>
+            <div class="kpi-value">${totalBDs}</div>
+            <div class="kpi-sub">recorded this period</div>
         </div>
 
+        <!-- ROW 3: Production context (subtle) -->
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
+            text-transform:uppercase;letter-spacing:.5px;margin-top:10px;margin-bottom:-4px;">
+            📊 Production Context — shared with production team
+        </div>
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Overall OEE</div>
             <div class="kpi-value" style="font-size:18px;color:${avgOEE >= state.wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">equip avg · ${wk || '—'}</div>
-        </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
-            <div class="kpi-label">Unplanned Downtime</div>
-            <div class="kpi-value" style="font-size:18px;color:#c0392b">${fmtH(totalUnpl)}</div>
-            <div class="kpi-sub">all presses this week</div>
+            <div class="kpi-sub">equip avg · ${wk || '—'} · from SFC</div>
         </div>
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Parts Made</div>
             <div class="kpi-value" style="font-size:18px">${fmtN(totalParts)}</div>
             <div class="kpi-sub">total this week</div>
+        </div>
+        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('maintenance')">
+            <div class="kpi-label">TPM Visits</div>
+            <div class="kpi-value" style="font-size:18px;color:#95C11F">${totalTPMs}</div>
+            <div class="kpi-sub">planned this period</div>
         </div>`;
 
     // ── TOP 5 DOWNTIME CHART ──
