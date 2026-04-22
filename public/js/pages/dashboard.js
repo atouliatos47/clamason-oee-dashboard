@@ -17,7 +17,8 @@ function renderDashboard() {
     const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
     const totalCost = maint.reduce((s, m) => s + (+m.cost_labour), 0);
     const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
-    const totalTPMs = maint.reduce((s, m) => s + (+m.tpm_count), 0);
+    const hasTpmData = maint.some(m => m.tpm_count !== undefined && m.tpm_count !== null && m.tpm_count !== '');
+    const totalTPMs = hasTpmData ? maint.reduce((s, m) => s + (+m.tpm_count), 0) : null;
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
@@ -27,9 +28,9 @@ function renderDashboard() {
     const mtbfCol = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
 
     // TPM vs Reactive ratio
-    const totalJobs = totalTPMs + totalBDs;
-    const tpmPct = totalJobs > 0 ? Math.round((totalTPMs / totalJobs) * 100) : 0;
-    const tpmRatioCol = tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
+    const totalJobs = (totalTPMs ?? 0) + totalBDs;
+    const tpmPct = hasTpmData && totalJobs > 0 ? Math.round((totalTPMs / totalJobs) * 100) : null;
+    const tpmRatioCol = tpmPct === null ? '#888' : tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
 
     // ── AVAILABILITY & UNPLANNED (from SFC) ──
     const avgAvail = active.length
@@ -95,8 +96,8 @@ function renderDashboard() {
         <div class="kpi-card" style="border-left-color:${tpmRatioCol};cursor:pointer"
             onclick="showPage('maintenance')">
             <div class="kpi-label">🔄 TPM vs Reactive</div>
-            <div class="kpi-value" style="color:${tpmRatioCol}">${tpmPct}%</div>
-            <div class="kpi-sub">${totalTPMs} TPM / ${totalBDs} reactive · target &gt;50%</div>
+            <div class="kpi-value" style="color:${tpmRatioCol}">${tpmPct !== null ? tpmPct + '%' : '—'}</div>
+            <div class="kpi-sub">${tpmPct !== null ? `${totalTPMs} TPM / ${totalBDs} reactive · target &gt;50%` : 'no TPM data in upload'}</div>
         </div>
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
             <div class="kpi-label">🏭 Total Breakdowns</div>
@@ -121,8 +122,8 @@ function renderDashboard() {
         </div>
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('maintenance')">
             <div class="kpi-label">TPM Visits</div>
-            <div class="kpi-value" style="font-size:18px;color:#95C11F">${totalTPMs}</div>
-            <div class="kpi-sub">planned this period</div>
+            <div class="kpi-value" style="font-size:18px;color:${totalTPMs !== null ? '#95C11F' : '#888'}">${totalTPMs !== null ? totalTPMs : '—'}</div>
+            <div class="kpi-sub">${totalTPMs !== null ? 'planned this period' : 'no TPM data in upload'}</div>
         </div>`;
 
     // ── INJECT RELIABILITY TREND CARD (once) ──
