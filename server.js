@@ -21,6 +21,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use('/api/oee',         require('./routes/oee'));
 app.use('/api/maintenance', require('./routes/maintenance'));
 app.use('/api/upload',      require('./routes/upload'));
+app.use('/api/fives',       require('./routes/fives'));
 
 // Combined data endpoint for frontend state
 app.get('/api/data', async (req, res) => {

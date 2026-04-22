@@ -55,6 +55,19 @@ async function initDB() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS fives_audits (
+        id           SERIAL PRIMARY KEY,
+        bms_number   VARCHAR(50),
+        auditor      VARCHAR(100),
+        area         VARCHAR(100),
+        audit_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+        answers      JSONB NOT NULL DEFAULT '{}',
+        total_score  NUMERIC(4,2) DEFAULT 0,
+        created_at   TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     console.log('✅ Database tables ready');
   } finally {
     client.release();

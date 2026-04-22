@@ -30,6 +30,8 @@ function showPage(page, param = null) {
         if (detailPage) detailPage.classList.add('active');
     } else if (page === 'kpi') {
         renderKPIBoard();
+    } else if (page === 'fives') {
+        renderFivesPage();
     }
 }
 
@@ -48,6 +50,7 @@ async function init() {
     } catch(e) {}
 
     await loadAllData();
+    await loadFivesAudits();
 
     // Load machine mapping into state
     try {
