@@ -172,15 +172,49 @@ function renderOEEPage() {
     renderOEEVisuals();
 }
 
+function _fleetStats(weeks) {
+    const weekStats = weeks.map(w => {
+        const wd = (state.oeeData[w] || []).filter(d => +d.net_avail_h > 0);
+        if (!wd.length) return null;
+        return {
+            avail: wd.reduce((s, d) => s + +d.avail, 0) / wd.length,
+            oee:   wd.reduce((s, d) => s + +d.oee,   0) / wd.length,
+            perf:  wd.reduce((s, d) => s + +d.perf,  0) / wd.length,
+            unpl:  (state.oeeData[w] || []).reduce((s, d) => s + +d.unplanned_h, 0),
+        };
+    }).filter(Boolean);
+    const n = weekStats.length || 1;
+    return {
+        avgAvail:  weekStats.reduce((s, w) => s + w.avail, 0) / n,
+        avgOEE:    weekStats.reduce((s, w) => s + w.oee,   0) / n,
+        avgPerf:   weekStats.reduce((s, w) => s + w.perf,  0) / n,
+        totalUnpl: weekStats.reduce((s, w) => s + w.unpl,  0),
+        hasData:   weekStats.length > 0,
+    };
+}
+
 function renderOEEKPIs() {
-    const wk = state.currentWeek;
-    const data = wk ? (state.oeeData[wk] || []) : [];
-    const active = data.filter(d => +d.net_avail_h > 0);
-    const avgAvail = active.length ? active.reduce((s, d) => s + +d.avail, 0) / active.length : 0;
-    const avgOEE = active.length ? active.reduce((s, d) => s + +d.oee, 0) / active.length : 0;
-    const avgPerf = active.length ? active.reduce((s, d) => s + +d.perf, 0) / active.length : 0;
-    const totalUnpl = data.reduce((s, d) => s + +d.unplanned_h, 0);
     const wcTarget = state.wcTarget || 65;
+    const wk = state.currentWeek;
+    const allMode = oeeQuickFilter === 0 && state.weeks.length > 0;
+
+    let avgAvail, avgOEE, avgPerf, totalUnpl, active, periodLabel;
+
+    if (allMode) {
+        ({ avgAvail, avgOEE, avgPerf, totalUnpl } = _fleetStats(state.weeks));
+        const latestData = wk ? (state.oeeData[wk] || []) : [];
+        active = latestData.filter(d => +d.net_avail_h > 0);
+        periodLabel = `all ${state.weeks.length} weeks`;
+    } else {
+        const data = wk ? (state.oeeData[wk] || []) : [];
+        active = data.filter(d => +d.net_avail_h > 0);
+        avgAvail  = active.length ? active.reduce((s, d) => s + +d.avail, 0) / active.length : 0;
+        avgOEE    = active.length ? active.reduce((s, d) => s + +d.oee,   0) / active.length : 0;
+        avgPerf   = active.length ? active.reduce((s, d) => s + +d.perf,  0) / active.length : 0;
+        totalUnpl = (wk ? (state.oeeData[wk] || []) : []).reduce((s, d) => s + +d.unplanned_h, 0);
+        periodLabel = wk || '—';
+    }
+
     const aboveAvail = active.filter(d => +d.avail >= wcTarget).length;
     const availCol = avgAvail >= wcTarget ? '#27ae60' : avgAvail >= wcTarget * 0.95 ? '#e67e22' : '#c0392b';
     const grid = document.getElementById('oeeKpiGrid');
@@ -189,27 +223,27 @@ function renderOEEKPIs() {
         <div class="kpi-card" style="border-left-color:${availCol}">
             <div class="kpi-label">Equipment Avg Availability</div>
             <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
-            <div class="kpi-sub">target ${wcTarget}% · ${wk || '—'}</div>
+            <div class="kpi-sub">target ${wcTarget}% · ${periodLabel}</div>
         </div>
         <div class="kpi-card" style="border-left-color:#27ae60">
             <div class="kpi-label">Above Avail Target</div>
             <div class="kpi-value" style="color:#27ae60">${aboveAvail} / ${active.length}</div>
-            <div class="kpi-sub">machines ≥ ${wcTarget}% availability</div>
+            <div class="kpi-sub">machines ≥ ${wcTarget}% · latest week</div>
         </div>
         <div class="kpi-card" style="border-left-color:#c0392b">
             <div class="kpi-label">Total Unplanned Down</div>
             <div class="kpi-value" style="color:#c0392b">${fmtH(totalUnpl)}</div>
-            <div class="kpi-sub">all presses this week</div>
+            <div class="kpi-sub">${allMode ? periodLabel : 'all presses this week'}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Equipment Avg OEE</div>
             <div class="kpi-value" style="color:${avgOEE >= wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">active machines · ${wk || '—'}</div>
+            <div class="kpi-sub">active machines · ${periodLabel}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Equipment Avg Performance</div>
             <div class="kpi-value">${fmt1(avgPerf)}%</div>
-            <div class="kpi-sub">active machines</div>
+            <div class="kpi-sub">active machines · ${periodLabel}</div>
         </div>`;
 }
 
@@ -219,15 +253,24 @@ function renderOEEVisuals() {
     const wk = state.currentWeek;
     const data = wk ? (state.oeeData[wk] || []) : [];
     const target = state.wcTarget || 65;
-    const active = data.filter(d => +d.net_avail_h > 0);
-    const avgAvail = active.length ? active.reduce((s, d) => s + +d.avail, 0) / active.length : 0;
-    const avgOEE = active.length ? active.reduce((s, d) => s + +d.oee, 0) / active.length : 0;
+    const allMode = oeeQuickFilter === 0 && state.weeks.length > 0;
+
+    let avgAvail, avgOEE, overallLabel;
+    if (allMode) {
+        ({ avgAvail, avgOEE } = _fleetStats(state.weeks));
+        overallLabel = `Equipment Overall — All Weeks Avg`;
+    } else {
+        const active = data.filter(d => +d.net_avail_h > 0);
+        avgAvail = active.length ? active.reduce((s, d) => s + +d.avail, 0) / active.length : 0;
+        avgOEE   = active.length ? active.reduce((s, d) => s + +d.oee,   0) / active.length : 0;
+        overallLabel = `Equipment Overall`;
+    }
 
     el.innerHTML = `
     <!-- Top row: fleet gauge + trend -->
     <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;margin-bottom:20px">
         <div>
-           <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:6px">Equipment Overall</div>
+           <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;text-align:center;margin-bottom:6px">${overallLabel}</div>
             ${renderFleetDonut(avgOEE, avgAvail, target)}
         </div>
         <div>
@@ -253,7 +296,7 @@ function renderOEEVisuals() {
     </div>
     <!-- Machine gauge grid -->
     <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
-        Active Machines — ${wk || '—'}
+        Active Machines — ${allMode ? `Latest Week (${wk || '—'})` : (wk || '—')}
         <span style="float:right;font-weight:400;font-size:10px;color:#aaa">sorted worst → best availability · click for detail</span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
