@@ -168,8 +168,9 @@ function renderOEEPage() {
             `<option value="${w}" ${w === state.currentWeek ? 'selected' : ''}>${w}</option>`
         ).join('');
     }
-    renderOEEKPIs();
-    renderOEEVisuals();
+    const allMode = oeeQuickFilter === 0 && state.weeks.length > 1;
+    renderOEEKPIs(allMode);
+    renderOEEVisuals(allMode);
 }
 
 function _fleetStats(weeks) {
@@ -193,10 +194,9 @@ function _fleetStats(weeks) {
     };
 }
 
-function renderOEEKPIs() {
+function renderOEEKPIs(allMode = false) {
     const wcTarget = state.wcTarget || 65;
     const wk = state.currentWeek;
-    const allMode = oeeQuickFilter === 0 && state.weeks.length > 0;
 
     let avgAvail, avgOEE, avgPerf, totalUnpl, active, periodLabel;
 
@@ -247,13 +247,12 @@ function renderOEEKPIs() {
         </div>`;
 }
 
-function renderOEEVisuals() {
+function renderOEEVisuals(allMode = false) {
     const el = document.getElementById('oeeBarsChart');
     if (!el) return;
     const wk = state.currentWeek;
     const data = wk ? (state.oeeData[wk] || []) : [];
     const target = state.wcTarget || 65;
-    const allMode = oeeQuickFilter === 0 && state.weeks.length > 0;
 
     let avgAvail, avgOEE, overallLabel;
     if (allMode) {
@@ -308,8 +307,8 @@ function renderOEEVisuals() {
 function setWeekFromSelect(wk) {
     state.currentWeek = wk;
     document.querySelectorAll('#quickFilters .week-tab').forEach(t => t.classList.remove('active'));
-    renderOEEKPIs();
-    renderOEEVisuals();
+    renderOEEKPIs(false);
+    renderOEEVisuals(false);
 }
 
 function setQuickFilter(n, btn) {
@@ -321,8 +320,9 @@ function setQuickFilter(n, btn) {
         const select = document.getElementById('weekSelect');
         if (select) select.value = state.currentWeek;
     }
-    renderOEEKPIs();
-    renderOEEVisuals();
+    const allMode = n === 0 && state.weeks.length > 1;
+    renderOEEKPIs(allMode);
+    renderOEEVisuals(allMode);
     renderOEETable();
 }
 
