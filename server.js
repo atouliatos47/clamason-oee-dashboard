@@ -9,7 +9,13 @@ const PORT = process.env.PORT || 3011;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders(res, filePath) {
+        if (filePath.endsWith('.js')) {
+            res.set('Cache-Control', 'no-store');
+        }
+    }
+}));
 
 // API Routes
 app.use('/api/oee',         require('./routes/oee'));
