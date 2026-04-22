@@ -9,7 +9,13 @@ const PORT = process.env.PORT || 3011;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders(res, filePath) {
+        if (filePath.endsWith('.js')) {
+            res.set('Cache-Control', 'no-store');
+        }
+    }
+}));
 
 // API Routes
 app.use('/api/oee',         require('./routes/oee'));
@@ -46,7 +52,9 @@ app.get('/api/data', async (req, res) => {
 });
 
 // Catch-all → PWA shell (must stay last)
+// no-store ensures the browser always fetches fresh HTML, never serves a stale cached shell
 app.get('/{*path}', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
