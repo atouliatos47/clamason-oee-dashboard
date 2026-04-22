@@ -1,9 +1,7 @@
-const CACHE = 'clamason-oee-v4';
+const CACHE = 'clamason-oee-v5';
 const STATIC_ASSETS = [
     '/css/style.css',
     '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
 ];
 
 self.addEventListener('install', e => {
@@ -12,35 +10,22 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-    e.waitUntil(caches.keys().then(keys =>
-        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ));
+    // Wipe every old cache unconditionally
+    e.waitUntil(
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+            .then(() => caches.open(CACHE).then(c => c.addAll(STATIC_ASSETS)))
+    );
     self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
-    // Never cache API calls
+    // Let the browser handle HTML navigation and JS normally (no SW interception)
+    // so server Cache-Control headers are respected and updates are instant.
+    if (e.request.mode === 'navigate') return;
+    if (new URL(e.request.url).pathname.endsWith('.js')) return;
     if (e.request.url.includes('/api/')) return;
 
-    const url = new URL(e.request.url);
-    const isNavigation = e.request.mode === 'navigate';
-    const isJS = url.pathname.endsWith('.js');
-
-    // HTML and JS: network-first so updates are always picked up immediately
-    if (isNavigation || isJS) {
-        e.respondWith(
-            fetch(e.request)
-                .then(res => {
-                    const clone = res.clone();
-                    caches.open(CACHE).then(c => c.put(e.request, clone));
-                    return res;
-                })
-                .catch(() => caches.match(e.request))
-        );
-        return;
-    }
-
-    // CSS / images: cache-first (stable assets)
+    // Cache-first only for CSS and images (stable assets)
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
             const clone = res.clone();

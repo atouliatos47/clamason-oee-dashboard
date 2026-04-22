@@ -52,7 +52,9 @@ app.get('/api/data', async (req, res) => {
 });
 
 // Catch-all → PWA shell (must stay last)
+// no-store ensures the browser always fetches fresh HTML, never serves a stale cached shell
 app.get('/{*path}', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
