@@ -39,9 +39,7 @@
       <a class="nav-item" onclick="showPage('upload')" href="#">
         <span class="nav-icon">📥</span>Upload
       </a>
-      <a class="nav-item" onclick="showPage('mapping')" href="#">
-        <span class="nav-icon">🔗</span>Mapping
-      </a>
+
     </nav>
   </div>
 
@@ -270,43 +268,7 @@
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
-    <!-- ═══ PAGE: MAPPING ═══ -->
-    <div id="page-mapping" class="page">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">🔗 Machine Name Mapping</span>
-          <span class="card-sub">Link Agility machines to SFC machines for MTBF calculation</span>
-        </div>
-        <p style="font-size:13px;color:#888;margin:0 0 14px">
-          Agility and SFC use different machine names. Set the match here — MTBF in the Top 5 Assets will update immediately after saving.
-        </p>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr style="background:#243547;color:#fff">
-                <th style="padding:10px 14px;text-align:left;font-size:12px">Agility Machine</th>
-                <th style="padding:10px 14px;width:40px"></th>
-                <th style="padding:10px 14px;text-align:left;font-size:12px">SFC Machine</th>
-              </tr>
-            </thead>
-            <tbody id="machineMappingBody">
-              <tr><td colspan="3" style="padding:20px;color:#aaa;text-align:center">Click Load to begin</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;margin-top:16px">
-          <button onclick="loadMachineMapping()"
-            style="background:#95C11F;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer">
-            🔄 Load
-          </button>
-          <button id="saveMappingBtn" onclick="saveMachineMapping()"
-            style="background:#243547;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer">
-            💾 Save Mappings
-          </button>
-          <span id="mappingStatus" style="font-size:13px"></span>
-        </div>
-      </div>
-    </div>
+
 
   </div><!-- /main -->
 
