@@ -49,4 +49,27 @@ router.get('/machine/:code', async (req, res) => {
   }
 });
 
+// GET monthly trend data (periods that look like "Apr 2026" not "Apr 2025 - Apr 2026")
+router.get('/trends', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        period_label,
+        SUM(breakdown_count) AS breakdowns,
+        SUM(tpm_count)       AS tpm,
+        SUM(downtime_hrs)    AS downtime_hrs,
+        CASE WHEN SUM(breakdown_count) > 0
+             THEN ROUND(SUM(downtime_hrs) / SUM(breakdown_count), 1)
+             ELSE 0 END      AS mttr
+      FROM agility_data
+      WHERE period_label NOT LIKE '%-%'
+      GROUP BY period_label
+      ORDER BY MIN(uploaded_at) ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

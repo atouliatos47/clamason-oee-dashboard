@@ -8,7 +8,8 @@ const state = {
     sortOEECol: 'unplanned_h',
     sortOEEDir: -1,
     sortMaintCol: 'downtime_hrs',
-    sortMaintDir: -1
+    sortMaintDir: -1,
+    maintTrends: []
 };
 
 // Helper function to load all data from server
@@ -23,6 +24,14 @@ async function loadAllData() {
         
         if (state.weeks.length > 0) {
             state.currentWeek = state.weeks[state.weeks.length - 1];
+        }
+
+        // Load monthly trend data
+        try {
+            const trendRes = await fetch('/api/maintenance/trends');
+            state.maintTrends = trendRes.ok ? await trendRes.json() : [];
+        } catch(e) {
+            state.maintTrends = [];
         }
         
         renderDashboard();

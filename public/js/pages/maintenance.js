@@ -58,6 +58,7 @@ function renderMaintPage() {
     }).join('');
 
     renderPareto();
+    renderTrendCharts();
     renderMaintTable();
 }
 
@@ -185,6 +186,82 @@ function renderPareto() {
                 <span style="display:flex;align-items:center;gap:4px"><span style="width:24px;height:2px;background:#243547;display:inline-block;opacity:0.4"></span>80% threshold</span>
             </div>
         </div>`;
+}
+
+// ── MONTHLY TREND CHARTS ─────────────────────────────────────────────────────
+function renderTrendCharts() {
+    const el = document.getElementById('maintTrendCharts');
+    if (!el) return;
+    const trends = state.maintTrends || [];
+    if (!trends.length) {
+        el.innerHTML = `<div class="card" style="grid-column:1/-1;padding:20px;text-align:center;color:#aaa">
+            Upload monthly Agility reports to see trend charts</div>`;
+        return;
+    }
+
+    const charts = [
+        { key: 'breakdowns', label: 'Breakdowns', color: '#c0392b', unit: '', fmt: v => Math.round(v) },
+        { key: 'tpm',        label: 'PPM Conducted', color: '#95C11F', unit: '', fmt: v => Math.round(v) },
+        { key: 'mttr',       label: 'Mean Time To Repair', color: '#e67e22', unit: 'h', fmt: v => (+v).toFixed(1) },
+        { key: 'downtime_hrs', label: 'Total Downtime', color: '#243547', unit: 'h', fmt: v => Math.round(v) },
+    ];
+
+    el.innerHTML = charts.map(chart => {
+        const vals = trends.map(t => +t[chart.key] || 0);
+        const maxV = Math.max(...vals, 1);
+        const W = 420, H = 200, padL = 40, padR = 10, padT = 20, padB = 50;
+        const chartH = H - padT - padB, chartW = W - padL - padR;
+        const bw = Math.min(30, chartW / trends.length - 4);
+        const gap = chartW / trends.length;
+
+        // Y ticks
+        const yMax = Math.ceil(maxV / 5) * 5 || 10;
+        const ticks = [0, Math.round(yMax*0.5), yMax];
+
+        let bars = '', yLabels = '', xLabels = '';
+
+        ticks.forEach(v => {
+            const y = padT + chartH - (v/yMax)*chartH;
+            yLabels += `<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#bbb">${v}${chart.unit}</text>`;
+            yLabels += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>`;
+        });
+
+        // Target line for MTTR (8h)
+        let targetLine = '';
+        if (chart.key === 'mttr') {
+            const ty = padT + chartH - (8/yMax)*chartH;
+            if (ty > padT) targetLine = `<line x1="${padL}" y1="${ty.toFixed(1)}" x2="${W-padR}" y2="${ty.toFixed(1)}" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="4,2"/>
+            <text x="${W-padR-2}" y="${(ty-3).toFixed(1)}" text-anchor="end" font-size="8" fill="#c0392b">T8h</text>`;
+        }
+
+        let linePoints = [];
+        trends.forEach((t, i) => {
+            const v = +t[chart.key] || 0;
+            const x = padL + i * gap + gap/2;
+            const bh = (v/yMax)*chartH;
+            const baseY = padT + chartH;
+            bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-bh).toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" fill="${chart.color}" rx="2" opacity="0.85"/>`;
+            if (v > 0) bars += `<text x="${x.toFixed(1)}" y="${(baseY-bh-3).toFixed(1)}" text-anchor="middle" font-size="8" fill="${chart.color}" font-weight="700">${chart.fmt(v)}</text>`;
+            xLabels += `<text x="${x.toFixed(1)}" y="${H-padB+14}" text-anchor="end" transform="rotate(-35,${x.toFixed(1)},${H-padB+14})" font-size="9" fill="#999">${t.period_label}</text>`;
+            linePoints.push(`${x.toFixed(1)},${(baseY-bh).toFixed(1)}`);
+        });
+
+        // Trend line
+        let trendLine = '';
+        if (linePoints.length > 1) {
+            trendLine = `<polyline points="${linePoints.join(' ')}" fill="none" stroke="${chart.color}" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.5"/>`;
+        }
+
+        return `<div class="card" style="padding:14px 16px">
+            <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${chart.label}</div>
+            <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+                ${yLabels}${targetLine}${bars}${trendLine}
+                <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+                <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+                ${xLabels}
+            </svg>
+        </div>`;
+    }).join('');
 }
 
 function setParetoMetric(metric) {

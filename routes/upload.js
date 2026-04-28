@@ -6,32 +6,6 @@ const { pool } = require('../db');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// ── Detect ISO week from a date string (MM/DD/YYYY or similar) ────────────────
-function detectWeekLabel(buffer) {
-  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-
-  // Scan cells for the first date string like "3/15/2026 12:00:00 AM"
-  for (const row of raw) {
-    for (const cell of row) {
-      if (cell && typeof cell === 'string') {
-        const m = cell.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (m) {
-          const [, mm, dd, yyyy] = m.map(Number);
-          const d = new Date(Date.UTC(yyyy, mm - 1, dd));
-          const dayNum = d.getUTCDay() || 7;
-          d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-          const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-          const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-          return `Wk ${weekNum}`;
-        }
-      }
-    }
-  }
-  return null;
-}
-
 // ── Parse SFC XLS ─────────────────────────────────────────────────────────────
 function parseSFC(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
@@ -134,7 +108,7 @@ function parseAgility(buffer) {
         labour_hrs: Math.round((parseFloat(row[7]) || 0) * 10) / 10,
         num_jobs: parseInt(row[10]) || 0,
         downtime_hrs: Math.round((parseFloat(row[11]) || 0) * 10) / 10,
-        tpm_count: 0, breakdown_count: 0, breakdowns: [], tpms: [],
+        tpm_count: 0, breakdown_count: 0, breakdowns: [],
       };
     } else if (isJobRow && current) {
       const isTpm = /tpm|preventive|planned service/i.test(c2);
@@ -143,11 +117,6 @@ function parseAgility(buffer) {
       const lc = parseFloat(row[6]) || 0;
       if (isTpm) {
         current.tpm_count++;
-        current.tpms.push({
-          wo: c1, desc: c2.slice(0, 80),
-          labour_hrs: Math.round(lh * 10) / 10,
-          cost_labour: Math.round(lc),
-        });
       } else {
         current.breakdown_count++;
         if (dt > 0 || lh > 0.3) {
@@ -164,7 +133,6 @@ function parseAgility(buffer) {
   if (current) machines.push(current);
   for (const m of machines) {
     m.breakdowns = m.breakdowns.sort((a,b) => b.downtime_hrs - a.downtime_hrs).slice(0, 5);
-    m.tpms = m.tpms.sort((a,b) => b.labour_hrs - a.labour_hrs).slice(0, 10);
   }
   return machines.filter(m => m.num_jobs > 0);
 }
@@ -172,11 +140,8 @@ function parseAgility(buffer) {
 // ── POST /api/upload/sfc ──────────────────────────────────────────────────────
 router.post('/sfc', upload.single('file'), async (req, res) => {
   try {
-    let weekLabel = req.body.week_label;
-    if (!weekLabel || !weekLabel.trim()) {
-      weekLabel = detectWeekLabel(req.file.buffer);
-      if (!weekLabel) return res.status(400).json({ error: 'Could not auto-detect week from file — please enter a week label manually' });
-    }
+    const weekLabel = req.body.week_label;
+    if (!weekLabel) return res.status(400).json({ error: 'week_label is required' });
     const machines = parseSFC(req.file.buffer);
     if (!machines.length) return res.status(400).json({ error: 'No machine data found in file' });
     const client = await pool.connect();
@@ -219,17 +184,17 @@ router.post('/agility', upload.single('file'), async (req, res) => {
         await client.query(`
           INSERT INTO agility_data
             (period_label, code, name, cost_labour, labour_hrs, num_jobs,
-             downtime_hrs, tpm_count, breakdown_count, breakdowns, tpms)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+             downtime_hrs, tpm_count, breakdown_count, breakdowns)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
           ON CONFLICT (period_label, code) DO UPDATE SET
             name=EXCLUDED.name, cost_labour=EXCLUDED.cost_labour,
             labour_hrs=EXCLUDED.labour_hrs, num_jobs=EXCLUDED.num_jobs,
             downtime_hrs=EXCLUDED.downtime_hrs, tpm_count=EXCLUDED.tpm_count,
             breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns,
-            tpms=EXCLUDED.tpms, uploaded_at=NOW()
+            uploaded_at=NOW()
         `, [periodLabel, m.code, m.name, m.cost_labour, m.labour_hrs,
             m.num_jobs, m.downtime_hrs, m.tpm_count, m.breakdown_count,
-            JSON.stringify(m.breakdowns), JSON.stringify(m.tpms)]);
+            JSON.stringify(m.breakdowns)]);
         inserted++;
       }
       res.json({ success: true, period: periodLabel, machines: inserted });
