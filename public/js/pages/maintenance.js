@@ -58,7 +58,6 @@ function renderMaintPage() {
     }).join('');
 
     renderPareto();
-    renderTrendCharts();
     renderMaintTable();
 }
 
