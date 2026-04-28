@@ -245,9 +245,12 @@ function renderScheduleChart() {
     }
     adh_pts.forEach(p => {
         adhLine += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#243547" stroke="#fff" stroke-width="2"/>`;
-        // Adherence % label above dot with white background
-        adhLine += `<rect x="${(p.x-14).toFixed(1)}" y="${(p.y-22).toFixed(1)}" width="28" height="13" rx="3" fill="white" opacity="0.85"/>`;
-        adhLine += `<text x="${p.x.toFixed(1)}" y="${(p.y-12).toFixed(1)}" text-anchor="middle" font-size="9" fill="#243547" font-weight="800">${p.adh}%</text>`;
+        // Adherence % label — fixed at top of chart (padT - 2) so it never overlaps bars
+        const lblY = padT - 2;
+        adhLine += `<rect x="${(p.x-18).toFixed(1)}" y="${(lblY-11).toFixed(1)}" width="36" height="14" rx="4" fill="#243547"/>`;
+        adhLine += `<text x="${p.x.toFixed(1)}" y="${(lblY).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${p.adh}%</text>`;
+        // Thin vertical guide line from label to dot
+        adhLine += `<line x1="${p.x.toFixed(1)}" y1="${(lblY+3).toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${(p.y-6).toFixed(1)}" stroke="#243547" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>`;
     });
 
     el.innerHTML = `
