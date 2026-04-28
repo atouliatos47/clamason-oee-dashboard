@@ -219,34 +219,44 @@ function renderOEEVisuals() {
     const target = state.wcTarget || 65;
 
     // When "All" selected (oeeQuickFilter===0) aggregate across all weeks; else use current week
-    let data, label;
+    let data, label, avgAvail, avgOEE;
     if (oeeQuickFilter === 0) {
-        // Build per-machine averages across all weeks
+        // Average the weekly fleet averages (same as what the user sees per-week)
+        const weeklyAvails = [], weeklyOEEs = [];
+        state.weeks.forEach(w => {
+            const wData = (state.oeeData[w] || []).filter(d => +d.net_avail_h > 0);
+            if (wData.length) {
+                weeklyAvails.push(wData.reduce((s,d)=>s+ +d.avail,0)/wData.length);
+                weeklyOEEs.push(wData.reduce((s,d)=>s+ +d.oee,0)/wData.length);
+            }
+        });
+        avgAvail = weeklyAvails.length ? weeklyAvails.reduce((s,v)=>s+v,0)/weeklyAvails.length : 0;
+        avgOEE   = weeklyOEEs.length   ? weeklyOEEs.reduce((s,v)=>s+v,0)/weeklyOEEs.length   : 0;
+
+        // Build per-machine averages for gauge cards (only weeks where machine was active)
         const machineMap = {};
         state.weeks.forEach(w => {
-            (state.oeeData[w] || []).forEach(d => {
-                if (!machineMap[d.machine]) machineMap[d.machine] = { avail:[], oee:[], net_avail_h:[], machine: d.machine };
+            (state.oeeData[w] || []).filter(d => +d.net_avail_h > 0).forEach(d => {
+                if (!machineMap[d.machine]) machineMap[d.machine] = { avail:[], oee:[], machine: d.machine };
                 machineMap[d.machine].avail.push(+d.avail);
                 machineMap[d.machine].oee.push(+d.oee);
-                machineMap[d.machine].net_avail_h.push(+d.net_avail_h);
             });
         });
         data = Object.values(machineMap).map(m => ({
             machine: m.machine,
             avail: m.avail.reduce((s,v)=>s+v,0)/m.avail.length,
             oee:   m.oee.reduce((s,v)=>s+v,0)/m.oee.length,
-            net_avail_h: m.net_avail_h.reduce((s,v)=>s+v,0)/m.net_avail_h.length,
+            net_avail_h: 1, // always show in cards since we filtered active only
         }));
         label = 'All Weeks (avg)';
     } else {
         const wk = state.currentWeek;
         data = wk ? (state.oeeData[wk] || []) : [];
+        const active = data.filter(d => +d.net_avail_h > 0);
+        avgAvail = active.length ? active.reduce((s,d)=>s+ +d.avail,0)/active.length : 0;
+        avgOEE   = active.length ? active.reduce((s,d)=>s+ +d.oee,0)/active.length : 0;
         label = wk || '—';
     }
-
-    const active = data.filter(d => +d.net_avail_h > 0);
-    const avgAvail = active.length ? active.reduce((s,d)=>s+ +d.avail,0)/active.length : 0;
-    const avgOEE   = active.length ? active.reduce((s,d)=>s+ +d.oee,0)/active.length : 0;
 
     el.innerHTML = `
     <!-- Top row: fleet gauge + trend -->
