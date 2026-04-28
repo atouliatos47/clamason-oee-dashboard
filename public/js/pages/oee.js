@@ -218,7 +218,7 @@ function renderOEEVisuals() {
     if (!el) return;
     const target = state.wcTarget || 65;
 
-    // When "All" selected (oeeQuickFilter===0) aggregate across all weeks; else use current week
+    // oeeQuickFilter: 0=All, -1=specific week from dropdown, >0=Last N weeks
     let data, label, avgAvail, avgOEE;
     if (oeeQuickFilter === 0) {
         // Average the weekly fleet averages (same as what the user sees per-week)
@@ -299,6 +299,7 @@ function renderOEEVisuals() {
 // ── WEEK FILTERS ──────────────────────────────────────────────────────────────
 function setWeekFromSelect(wk) {
     state.currentWeek = wk;
+    oeeQuickFilter = -1; // specific week selected - not "All", not "Last N"
     document.querySelectorAll('#quickFilters .week-tab').forEach(t => t.classList.remove('active'));
     renderOEEKPIs();
     renderOEEVisuals();
@@ -308,14 +309,15 @@ function setQuickFilter(n, btn) {
     oeeQuickFilter = n;
     document.querySelectorAll('#quickFilters .week-tab').forEach(t => t.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    if (state.weeks.length) {
-        state.currentWeek = state.weeks[state.weeks.length - 1];
+    // For Last N filters, show last week in that range; for All (n=0) show overall
+    if (n !== 0 && state.weeks.length) {
+        const visibleWeeks = n > 0 ? state.weeks.slice(-n) : state.weeks;
+        state.currentWeek = visibleWeeks[visibleWeeks.length - 1];
         const select = document.getElementById('weekSelect');
         if (select) select.value = state.currentWeek;
     }
     renderOEEKPIs();
     renderOEEVisuals();
-    renderOEETable();
 }
 
 function getOEEFiltered() {
