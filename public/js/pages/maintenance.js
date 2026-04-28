@@ -66,6 +66,12 @@ function renderPareto() {
     const data = state.maintData;
     if (!data.length) return;
 
+    // Monthly trends tab
+    if (paretoMetric === 'trends') {
+        renderTrendsInPareto();
+        return;
+    }
+
     const metrics = {
         downtime_hrs: { label: 'Downtime Hrs', fmt: v => `${Math.round(v)}h`, color: '#c0392b' },
         cost_labour: { label: 'Labour Cost', fmt: v => fmtK(v), color: '#e67e22' },
@@ -171,6 +177,10 @@ function renderPareto() {
                                    background:${k === paretoMetric ? v.color : '#fff'};color:${k === paretoMetric ? '#fff' : '#666'};
                                    font-size:12px;font-weight:700;cursor:pointer">${v.label}</button>`
     ).join('')}
+                <button onclick="setParetoMetric('trends')"
+                    style="padding:5px 12px;border-radius:16px;border:1px solid ${'trends' === paretoMetric ? '#243547' : '#ddd'};
+                           background:${'trends' === paretoMetric ? '#243547' : '#fff'};color:${'trends' === paretoMetric ? '#fff' : '#666'};
+                           font-size:12px;font-weight:700;cursor:pointer">📈 Monthly Trends</button>
                 </div>
             </div>
             <div style="background:#f9f9f9;border-radius:6px;padding:10px;margin-bottom:12px;font-size:13px;color:#555">
@@ -262,6 +272,80 @@ function renderTrendCharts() {
             </svg>
         </div>`;
     }).join('');
+}
+
+function renderTrendsInPareto() {
+    const trends = state.maintTrends || [];
+
+    const charts = [
+        { key: 'breakdowns',   label: 'Breakdowns',         color: '#c0392b', unit: '' },
+        { key: 'tpm',          label: 'PPM Conducted',       color: '#95C11F', unit: '' },
+        { key: 'mttr',         label: 'Mean Time To Repair', color: '#e67e22', unit: 'h', target: 8 },
+        { key: 'downtime_hrs', label: 'Total Downtime',      color: '#243547', unit: 'h' },
+    ];
+
+    const chartSVGs = trends.length === 0
+        ? `<div style="grid-column:1/-1;padding:30px;text-align:center;color:#aaa">Upload monthly Agility reports using 📆 Monthly Upload to see trends here</div>`
+        : charts.map(chart => {
+            const vals = trends.map(t => +t[chart.key] || 0);
+            const maxV = Math.max(...vals, 1);
+            const yMax = Math.ceil(maxV / 5) * 5 || 10;
+            const W = 400, H = 200, padL = 42, padR = 10, padT = 20, padB = 50;
+            const chartH = H - padT - padB, chartW = W - padL - padR;
+            const bw = Math.min(36, chartW / Math.max(trends.length,1) - 4);
+            const gap = chartW / Math.max(trends.length,1);
+            const ticks = [0, Math.round(yMax*0.5), yMax];
+
+            let bars = '', yLbls = '', xLbls = '', targetLine = '';
+
+            ticks.forEach(v => {
+                const y = padT + chartH - (v/yMax)*chartH;
+                yLbls += `<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#bbb">${v}${chart.unit}</text>`;
+                yLbls += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>`;
+            });
+
+            if (chart.target && chart.target <= yMax) {
+                const ty = padT + chartH - (chart.target/yMax)*chartH;
+                targetLine = `<line x1="${padL}" y1="${ty.toFixed(1)}" x2="${W-padR}" y2="${ty.toFixed(1)}" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="4,2"/>
+                <text x="${W-padR-2}" y="${(ty-3).toFixed(1)}" text-anchor="end" font-size="8" fill="#c0392b">T${chart.target}${chart.unit}</text>`;
+            }
+
+            trends.forEach((t, i) => {
+                const v = +t[chart.key] || 0;
+                const x = padL + i * gap + gap/2;
+                const bh = (v/yMax)*chartH;
+                const baseY = padT + chartH;
+                bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-bh).toFixed(1)}" width="${bw}" height="${Math.max(bh,0).toFixed(1)}" fill="${chart.color}" rx="2" opacity="0.85"/>`;
+                if (v > 0) bars += `<text x="${x.toFixed(1)}" y="${(baseY-bh-3).toFixed(1)}" text-anchor="middle" font-size="8" fill="${chart.color}" font-weight="700">${Number.isInteger(v)?v:v.toFixed(1)}${chart.unit}</text>`;
+                xLbls += `<text x="${x.toFixed(1)}" y="${H-padB+14}" text-anchor="end" transform="rotate(-35,${x.toFixed(1)},${H-padB+14})" font-size="9" fill="#999">${t.period_label}</text>`;
+            });
+
+            return `<div style="background:#f9f9f9;border-radius:8px;padding:12px">
+                <div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${chart.label}</div>
+                <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+                    ${yLbls}${targetLine}${bars}
+                    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+                    <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+                    ${xLbls}
+                </svg>
+            </div>`;
+        }).join('');
+
+    document.getElementById('paretoCard').innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📊 Pareto Analysis</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button onclick="setParetoMetric('downtime_hrs')" style="padding:5px 12px;border-radius:16px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:700;cursor:pointer">Downtime Hrs</button>
+                    <button onclick="setParetoMetric('cost_labour')" style="padding:5px 12px;border-radius:16px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:700;cursor:pointer">Labour Cost</button>
+                    <button onclick="setParetoMetric('breakdown_count')" style="padding:5px 12px;border-radius:16px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:700;cursor:pointer">Breakdowns</button>
+                    <button onclick="setParetoMetric('trends')" style="padding:5px 12px;border-radius:16px;border:1px solid #243547;background:#243547;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📈 Monthly Trends</button>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px">
+                ${chartSVGs}
+            </div>
+        </div>`;
 }
 
 function setParetoMetric(metric) {
