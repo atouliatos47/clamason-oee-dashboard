@@ -49,24 +49,6 @@ function updateTarget(key, rawVal) {
 }
 
 function kpiRow(row, targets) {
-    // Read-only rows (like MTTF which is calculated, not targeted)
-    if (row.readOnly) {
-        const val = row.actual;
-        const isSched = row.unit === '%';
-        const col = isSched
-            ? (val >= 85 ? '#27ae60' : val >= 70 ? '#e67e22' : '#c0392b')
-            : (val <= 0 ? '#c0392b' : val >= 6 ? '#27ae60' : '#e67e22');
-        const note = isSched
-            ? `run h ÷ net avail h · ${state.currentWeek || '—'}`
-            : (val <= 0 ? '⚠ Negative — machines fail faster than repaired' : 'MTBF − MTTR · calculated');
-        return `<tr style="background:#fafafa;">
-            <td style="padding:12px 16px;font-weight:700;color:#243547;width:220px;">${row.label}</td>
-            <td style="padding:12px 16px;font-size:20px;font-weight:700;color:${col};width:130px;">${val}${row.unit}</td>
-            <td style="padding:12px 16px;width:150px;color:#aaa;font-size:12px;font-style:italic">calculated</td>
-            <td style="padding:12px 16px;width:110px;">—</td>
-            <td style="padding:12px 16px;font-size:13px;color:${col};">${note}</td>
-        </tr>`;
-    }
     const t = targets[row.key];
     const tl = trafficLight(row.actual, t.value, row.higher);
     const gap = row.higher
@@ -114,11 +96,6 @@ function renderKPIBoard() {
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
 
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
-    // Schedule Adherence
-    const totalRunH_wk  = (state.oeeData[wk] || []).reduce((s,d) => s + (+d.run_h||0), 0);
-    const totalNetAvail  = (state.oeeData[wk] || []).reduce((s,d) => s + (+d.net_avail_h||0), 0);
-    const schedAdherence = totalNetAvail > 0 ? Math.round((totalRunH_wk/totalNetAvail)*1000)/10 : 0;
-
     const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
     const avgTPM = maint.length > 0 ? Math.round((totalTPM / maint.length) * 10) / 10 : 0;
@@ -153,8 +130,6 @@ function renderKPIBoard() {
         { key: 'avail', label: 'Availability %', actual: avgAvail, unit: '%', higher: true },
         { key: 'maxMTTR', label: 'Equipment MTTR', actual: equipMTTR, unit: 'h', higher: false },
         { key: 'minMTBF', label: 'Equipment MTBF', actual: equipMTBF, unit: 'h', higher: true },
-        { key: null, label: 'Equipment MTTF', actual: equipMTBF > 0 ? Math.round((equipMTBF - equipMTTR)*10)/10 : 0, unit: 'h', higher: true, readOnly: true },
-        { key: null, label: 'Schedule Adherence', actual: schedAdherence, unit: '%', higher: true, readOnly: true },
         { key: 'maxDowntime', label: 'Annual Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
         { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },
@@ -303,26 +278,48 @@ function renderKPIBoard() {
             ${top5.map((m, i) => {
         const assetMTTR = +m.breakdown_count > 0
             ? Math.round((+m.downtime_hrs / +m.breakdown_count) * 10) / 10 : 0;
-        const mttrCol = assetMTTR <= 4 ? '#27ae60' : assetMTTR <= 8 ? '#e67e22' : '#c0392b';
+        // Use machine_mapping table first, then fall back to ISI number match
+        const mapping = (state.machineMapping || []).find(mp =>
+            mp.agility_name === m.name && mp.sfc_name);
+        const sfcName = mapping ? mapping.sfc_name : null;
+        const isiMatch = m.name.replace(/\s/g,'').match(/ISI(\d+)/i);
+        const isiNum = isiMatch ? isiMatch[1] : null;
+        const assetRunH = state.weeks.reduce((s, w) => {
+            const row = (state.oeeData[w] || []).find(d => {
+                if (sfcName) return d.machine === sfcName;
+                if (isiNum) return d.machine.replace(/\s/g,'').toUpperCase().includes('ISI' + isiNum);
+                const firstWord = m.name.split(/[\s|]+/).filter(x=>x.length>2)[0] || '';
+                return d.machine.toLowerCase().includes(firstWord.toLowerCase());
+            });
+            return s + (row ? +row.run_h || 0 : 0);
+        }, 0);
+        const assetMTBF = +m.breakdown_count > 0 && assetRunH > 0
+            ? Math.round((assetRunH / +m.breakdown_count) * 10) / 10 : 0;
+        const mttrCol = assetMTTR <= 8 ? '#27ae60' : assetMTTR <= 12 ? '#e67e22' : '#c0392b';
+        const mtbfCol = assetMTBF >= 6 ? '#27ae60' : assetMTBF >= 3 ? '#e67e22' : '#c0392b';
         return `
-                <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #f0f0f0;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:${i === 0 ? '#c0392b' : i === 1 ? '#e67e22' : i === 2 ? '#e6b800' : '#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${i + 1}</div>
-                    <div style="flex:1;font-size:14px;font-weight:700;color:#243547;">${m.name}</div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #f0f0f0;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:${i === 0 ? '#c0392b' : i === 1 ? '#e67e22' : i === 2 ? '#e6b800' : '#888'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${i + 1}</div>
+                    <div style="flex:1;font-size:16px;font-weight:700;color:#243547;">${m.name}</div>
                     <div style="text-align:center;min-width:80px;">
-                        <div style="font-size:14px;color:#c0392b;font-weight:700;">${Math.round(+m.downtime_hrs)}h</div>
-                        <div style="font-size:10px;color:#888;">downtime</div>
+                        <div style="font-size:17px;color:#c0392b;font-weight:700;">${Math.round(+m.downtime_hrs)}h</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">downtime</div>
                     </div>
                     <div style="text-align:center;min-width:70px;">
-                        <div style="font-size:14px;font-weight:700;color:#243547;">${m.breakdown_count}</div>
-                        <div style="font-size:10px;color:#888;">breakdowns</div>
+                        <div style="font-size:17px;font-weight:700;color:#243547;">${m.breakdown_count}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">breakdowns</div>
                     </div>
                     <div style="text-align:center;min-width:80px;">
-                        <div style="font-size:14px;font-weight:700;color:${mttrCol};">${assetMTTR}h</div>
-                        <div style="font-size:10px;color:#888;">MTTR</div>
+                        <div style="font-size:17px;font-weight:700;color:${mttrCol};">${assetMTTR}h</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">MTTR</div>
+                    </div>
+                    <div style="text-align:center;min-width:80px;">
+                        <div style="font-size:17px;font-weight:700;color:${mtbfCol};">${assetMTBF > 0 ? assetMTBF + 'h' : '—'}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">MTBF</div>
                     </div>
                     <div style="text-align:center;min-width:70px;">
-                        <div style="font-size:14px;font-weight:700;color:#243547;">${m.tpm_count}</div>
-                        <div style="font-size:10px;color:#888;">TPM visits</div>
+                        <div style="font-size:17px;font-weight:700;color:#243547;">${m.tpm_count}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px;">TPM visits</div>
                     </div>
                 </div>`;
     }).join('')}

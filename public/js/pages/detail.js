@@ -64,17 +64,6 @@ function renderBreakdownCard(b) {
         </div>`;
 }
 
-function renderTpmCard(t) {
-    return `
-        <div class="breakdown-card" style="border-left-color:#95C11F">
-            <div class="bd-hrs" style="color:#6a8c15">${t.labour_hrs}h</div>
-            <div class="bd-info">
-                <div class="bd-desc">${t.desc}</div>
-                <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h</div>
-            </div>
-        </div>`;
-}
-
 function renderDetail(d) {
     const el = document.getElementById('detailContent');
 
@@ -437,7 +426,6 @@ function renderDetail(d) {
     } else if (d.type === 'maint') {
         const rawBds = Array.isArray(d.breakdowns) ? d.breakdowns : JSON.parse(d.breakdowns || '[]');
         const bds = groupSimilarBreakdowns(rawBds);
-        const rawTpms = Array.isArray(d.tpms) ? d.tpms : JSON.parse(d.tpms || '[]');
         const mttr = calcMTTR(d.downtime_hrs, d.breakdown_count);
 
         el.innerHTML = `
@@ -474,15 +462,6 @@ function renderDetail(d) {
                 ${bds.length
                 ? bds.map(b => renderBreakdownCard(b)).join('')
                 : '<p style="color:#aaa;font-size:13px">No breakdown downtime recorded</p>'}
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">✅ TPM history</span>
-                    <span class="card-sub">${rawTpms.length} of ${d.tpm_count} shown</span>
-                </div>
-                ${rawTpms.length
-                ? rawTpms.map(t => renderTpmCard(t)).join('')
-                : '<p style="color:#aaa;font-size:13px">No TPM jobs recorded</p>'}
             </div>`;
     }
 }
