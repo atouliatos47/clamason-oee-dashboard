@@ -83,6 +83,36 @@ async function uploadSFC() {
     }
 }
 
+let agilityMode = 'annual'; // 'annual' or 'monthly'
+
+function setAgilityMode(mode) {
+    agilityMode = mode;
+    const annualBtn  = document.getElementById('agilityModeAnnual');
+    const monthlyBtn = document.getElementById('agilityModeMonthly');
+    const picker     = document.getElementById('agilityMonthPicker');
+    if (mode === 'annual') {
+        annualBtn.style.background  = '#243547';
+        annualBtn.style.color       = '#fff';
+        annualBtn.style.borderColor = '#243547';
+        monthlyBtn.style.background  = '#fff';
+        monthlyBtn.style.color       = '#888';
+        monthlyBtn.style.borderColor = '#ddd';
+        picker.style.display = 'none';
+    } else {
+        monthlyBtn.style.background  = '#243547';
+        monthlyBtn.style.color       = '#fff';
+        monthlyBtn.style.borderColor = '#243547';
+        annualBtn.style.background  = '#fff';
+        annualBtn.style.color       = '#888';
+        annualBtn.style.borderColor = '#ddd';
+        picker.style.display = 'block';
+        // Default to current month
+        const now = new Date();
+        document.getElementById('agilityMonth').value =
+            `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    }
+}
+
 async function uploadAgility() {
     const fileInput = document.getElementById('agilityFile');
     const file = fileInput.files[0];
@@ -90,10 +120,23 @@ async function uploadAgility() {
 
     if (!file) { showToast('Please select a file', 'error'); return; }
 
-    const now = new Date();
-    const from = new Date(now.getFullYear() - 1, now.getMonth());
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const periodLabel = `${months[from.getMonth()]} ${from.getFullYear()} - ${months[now.getMonth()]} ${now.getFullYear()}`;
+    let periodLabel;
+
+    if (agilityMode === 'monthly') {
+        const monthVal = document.getElementById('agilityMonth').value;
+        if (!monthVal) {
+            status.style.color = '#c0392b';
+            status.textContent = '❌ Please select a month';
+            return;
+        }
+        const [yr, mo] = monthVal.split('-');
+        periodLabel = `${months[parseInt(mo)-1]} ${yr}`;
+    } else {
+        const now = new Date();
+        const from = new Date(now.getFullYear() - 1, now.getMonth());
+        periodLabel = `${months[from.getMonth()]} ${from.getFullYear()} - ${months[now.getMonth()]} ${now.getFullYear()}`;
+    }
 
     const btn = document.querySelector('button[onclick="uploadAgility()"]');
     btn.disabled = true;
