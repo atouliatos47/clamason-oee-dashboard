@@ -1,23 +1,17 @@
-// dashboard.js - Maintenance Reliability Dashboard
+// dashboard.js - Maintenance-first dashboard
 
 if (!state.wcTarget) state.wcTarget = 65;
 
 function renderDashboard() {
-    // Read saved targets from localStorage (same source as KPI Board)
-    const _saved = (() => { try { return JSON.parse(localStorage.getItem('clamason_kpi_targets') || '{}'); } catch { return {}; } })();
-    const mttrTarget = _saved.maxMTTR?.value || 8;
-    const mtbfTarget = _saved.minMTBF?.value || 6;
-
     const wk = state.currentWeek;
     const data = wk ? (state.oeeData[wk] || []) : [];
     const active = data.filter(d => +d.oee > 0);
 
-    // ── MAINTENANCE KPIs (from Agility) ──
+    // Maintenance KPIs
     const maint = state.maintData || [];
     const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
     const totalCost = maint.reduce((s, m) => s + (+m.cost_labour), 0);
     const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
-    const totalTPMs = maint.reduce((s, m) => s + (+m.tpm_count), 0);
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
@@ -25,108 +19,100 @@ function renderDashboard() {
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
     const mttrCol = equipMTTR <= mttrTarget ? '#27ae60' : equipMTTR <= mttrTarget * 1.5 ? '#e67e22' : '#c0392b';
     const mtbfCol = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
+    const equipMTTF = equipMTBF > 0 ? Math.round((equipMTBF - equipMTTR) * 10) / 10 : 0;
+    const mttfCol = equipMTTF <= 0 ? '#c0392b' : equipMTTF >= mtbfTarget ? '#27ae60' : '#e67e22';
 
-    // TPM vs Reactive ratio
-    const totalJobs = totalTPMs + totalBDs;
-    const tpmPct = totalJobs > 0 ? Math.round((totalTPMs / totalJobs) * 100) : 0;
-    const tpmRatioCol = tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
-
-    // ── AVAILABILITY & UNPLANNED (from SFC) ──
+    // Availability from SFC
     const avgAvail = active.length
         ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
     const availCol = avgAvail >= state.wcTarget ? '#27ae60'
         : avgAvail >= state.wcTarget * 0.95 ? '#e67e22' : '#c0392b';
-    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
-    const unplCol = totalUnpl > 200 ? '#c0392b' : totalUnpl > 100 ? '#e67e22' : '#27ae60';
 
-    // ── PRODUCTION CONTEXT (from SFC) ──
+    // Production context
     const avgOEE = active.length
         ? active.reduce((s, d) => s + (+d.oee), 0) / active.length : 0;
+    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
     const totalParts = data.reduce((s, d) => s + (+d.total_parts), 0);
     const period = maint[0]?.period_label || 'Annual';
 
-    // ── HTML: Reliability-first layout ──
+    // Schedule Adherence from SFC (current week)
+    const totalRunH_wk  = data.reduce((s, d) => s + (+d.run_h || 0), 0);
+    const totalNetAvail  = data.reduce((s, d) => s + (+d.net_avail_h || 0), 0);
+    const schedAdherence = totalNetAvail > 0 ? Math.round((totalRunH_wk / totalNetAvail) * 1000) / 10 : 0;
+    const schedCol = schedAdherence >= 85 ? '#27ae60' : schedAdherence >= 70 ? '#e67e22' : '#c0392b';
+
+    // ── YOUR NUMBERS (Maintenance) ──
     document.getElementById('kpiGrid').innerHTML = `
-        <!-- BAND TITLE -->
-        <div style="grid-column:1/-1;font-size:13px;font-weight:700;color:#243547;
-            text-transform:uppercase;letter-spacing:.8px;margin-bottom:-2px;
-            border-bottom:2px solid #95C11F;padding-bottom:6px;">
-            ⚙️ Equipment Reliability — Maintenance KPIs
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
+            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;">
+            🔧 Your Numbers — Maintenance
         </div>
 
-        <!-- ROW 1: Headline reliability numbers -->
         <div class="kpi-card" style="border-left-color:${availCol};cursor:pointer"
-            onclick="showPage('oee')">
-            <div class="kpi-label">🔧 Availability</div>
+            onclick="showPage('kpi')">
+            <div class="kpi-label">Equipment Availability</div>
             <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
-            <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'} · from SFC</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${mttrCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">⏱️ MTTR</div>
-            <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
-            <div class="kpi-sub">mean time to repair · target &lt;${mttrTarget}h</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">⚙️ MTBF</div>
-            <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
-            <div class="kpi-sub">mean time between failures · target &gt;${mtbfTarget}h</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${unplCol};cursor:pointer"
-            onclick="showPage('oee')">
-            <div class="kpi-label">🔴 Unplanned Downtime</div>
-            <div class="kpi-value" style="color:${unplCol}">${fmtH(totalUnpl)}</div>
-            <div class="kpi-sub">this week · from SFC</div>
-        </div>
-
-        <!-- ROW 2: Business impact -->
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
-            <div class="kpi-label">💷 Reactive Labour Cost</div>
-            <div class="kpi-value">${fmtK(totalCost)}</div>
-            <div class="kpi-sub">annual maintenance labour</div>
+            <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'}</div>
         </div>
         <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
             onclick="showPage('maintenance')">
-            <div class="kpi-label">📉 Annual Downtime</div>
+            <div class="kpi-label">Annual Downtime</div>
             <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
             <div class="kpi-sub">${period}</div>
         </div>
-        <div class="kpi-card" style="border-left-color:${tpmRatioCol};cursor:pointer"
-            onclick="showPage('maintenance')">
-            <div class="kpi-label">🔄 TPM vs Reactive</div>
-            <div class="kpi-value" style="color:${tpmRatioCol}">${tpmPct}%</div>
-            <div class="kpi-sub">${totalTPMs} TPM / ${totalBDs} reactive · target &gt;50%</div>
-        </div>
         <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
-            <div class="kpi-label">🏭 Total Breakdowns</div>
+            <div class="kpi-label">Total Breakdowns</div>
             <div class="kpi-value">${totalBDs}</div>
             <div class="kpi-sub">recorded this period</div>
         </div>
-
-        <!-- ROW 3: Production context (subtle) -->
-        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
-            text-transform:uppercase;letter-spacing:.5px;margin-top:10px;margin-bottom:-4px;">
-            📊 Production Context — shared with production team
+        <div class="kpi-card" style="border-left-color:${mttrCol};cursor:pointer"
+            onclick="showPage('kpi')">
+            <div class="kpi-label">Equipment MTTR</div>
+            <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
+            <div class="kpi-sub">target &lt;4h · mean time to repair</div>
         </div>
+        <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
+            onclick="showPage('kpi')">
+            <div class="kpi-label">Equipment MTBF</div>
+            <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
+            <div class="kpi-sub">target &gt;200h · mean time between failures</div>
+        </div>
+        <div class="kpi-card" style="border-left-color:${mttfCol};cursor:pointer" onclick="showPage('kpi')">
+            <div class="kpi-label">Equipment MTTF</div>
+            <div class="kpi-value" style="color:${mttfCol}">${equipMTTF > 0 ? equipMTTF + 'h' : '⚠ ' + equipMTTF + 'h'}</div>
+            <div class="kpi-sub">mean time to failure · MTBF − MTTR</div>
+        </div>
+        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
+            <div class="kpi-label">Labour Cost</div>
+            <div class="kpi-value">${fmtK(totalCost)}</div>
+            <div class="kpi-sub">annual maintenance labour</div>
+        </div>
+
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
+            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;margin-top:8px;">
+            📊 Production Context — shared KPI
+        </div>
+
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Overall OEE</div>
             <div class="kpi-value" style="font-size:18px;color:${avgOEE >= state.wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">equip avg · ${wk || '—'} · from SFC</div>
+            <div class="kpi-sub">equip avg · ${wk || '—'}</div>
+        </div>
+        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
+            <div class="kpi-label">Unplanned Downtime</div>
+            <div class="kpi-value" style="font-size:18px;color:#c0392b">${fmtH(totalUnpl)}</div>
+            <div class="kpi-sub">all presses this week</div>
         </div>
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
             <div class="kpi-label">Parts Made</div>
             <div class="kpi-value" style="font-size:18px">${fmtN(totalParts)}</div>
             <div class="kpi-sub">total this week</div>
         </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('maintenance')">
-            <div class="kpi-label">TPM Visits</div>
-            <div class="kpi-value" style="font-size:18px;color:#95C11F">${totalTPMs}</div>
-            <div class="kpi-sub">planned this period</div>
+        <div class="kpi-card" style="background:#f8f9fa;border-left-color:${schedCol};cursor:pointer" onclick="showPage('kpi')">
+            <div class="kpi-label">Schedule Adherence</div>
+            <div class="kpi-value" style="font-size:18px;color:${schedCol}">${schedAdherence}%</div>
+            <div class="kpi-sub">run h ÷ net avail h · ${wk || '—'}</div>
         </div>`;
-
-    // ── INJECT RELIABILITY TREND CARD (once) ──
-    renderReliabilityTrend();
 
     // ── TOP 5 DOWNTIME CHART ──
     const top5 = [...maint].filter(m => +m.downtime_hrs > 0)
@@ -153,6 +139,9 @@ function renderDashboard() {
 
     // ── TPM PIE ──
     renderTPMPie();
+
+    // ── SCHEDULE ADHERENCE CHART ──
+    renderScheduleChart();
 
     // ── AVAILABILITY TREND SPARKLINES ──
     const allMachines = [...new Set(
@@ -184,6 +173,79 @@ function renderDashboard() {
             </div>`;
         }).join('');
     }
+}
+
+function renderScheduleChart() {
+    const el = document.getElementById('scheduleChart');
+    if (!el) return;
+
+    // Build per-week run vs unplanned hours across all weeks
+    const weeks = state.weeks;
+    if (!weeks.length) {
+        el.innerHTML = emptyState('Upload SFC data to see schedule adherence');
+        return;
+    }
+
+    const weekData = weeks.map(w => {
+        const d = state.oeeData[w] || [];
+        const run     = d.reduce((s,x) => s + (+x.run_h||0), 0);
+        const unpl    = d.reduce((s,x) => s + (+x.unplanned_h||0), 0);
+        const netAvail= d.reduce((s,x) => s + (+x.net_avail_h||0), 0);
+        const adh     = netAvail > 0 ? Math.round((run/netAvail)*1000)/10 : 0;
+        return { w, run: Math.round(run), unpl: Math.round(unpl), netAvail: Math.round(netAvail), adh };
+    });
+
+    const maxH = Math.max(...weekData.map(d => d.netAvail), 1);
+    const W = 560, H = 160, padL = 36, padB = 28, padT = 10, padR = 10;
+    const chartH = H - padT - padB, chartW = W - padL - padR;
+    const bw = Math.min(32, chartW / weeks.length - 4);
+    const gap = chartW / weeks.length;
+
+    let bars = '', labels = '', adh_pts = [];
+    weekData.forEach((d, i) => {
+        const x = padL + i * gap + gap/2;
+        const runH  = (d.run  / maxH) * chartH;
+        const unplH = (d.unpl / maxH) * chartH;
+        const baseY = padT + chartH;
+        bars += `<rect x="${(x - bw/2).toFixed(1)}" y="${(baseY - runH).toFixed(1)}" width="${bw}" height="${runH.toFixed(1)}" fill="#95C11F" rx="2"/>`;
+        bars += `<rect x="${(x - bw/2).toFixed(1)}" y="${(baseY - runH - unplH).toFixed(1)}" width="${bw}" height="${unplH.toFixed(1)}" fill="#c0392b" rx="2"/>`;
+        const lbl = String(d.w).replace('Wk ','W');
+        labels += `<text x="${x.toFixed(1)}" y="${H-padB+14}" text-anchor="middle" font-size="9" fill="#999">${lbl}</text>`;
+        adh_pts.push({ x, y: padT + chartH - (d.adh/100)*chartH });
+    });
+
+    // Adherence line
+    let adhLine = '';
+    if (adh_pts.length > 1) {
+        adhLine = `<polyline points="${adh_pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="#243547" stroke-width="2" stroke-dasharray="4,2"/>`;
+        adh_pts.forEach(p => { adhLine += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#243547" stroke="#fff" stroke-width="1.5"/>`; });
+    }
+
+    // Y axis labels
+    let yLabels = '';
+    [0,25,50,75,100].forEach(v => {
+        const y = padT + chartH - (v/100)*chartH;
+        yLabels += `<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#bbb">${v}%</text>`;
+        yLabels += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>`;
+    });
+
+    el.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+        📅 Schedule Adherence — Run Hours vs Unplanned Downtime
+        <span style="float:right;display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;color:#243547">
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:10px;background:#95C11F;border-radius:2px;display:inline-block"></span>Run h</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:10px;background:#c0392b;border-radius:2px;display:inline-block"></span>Unplanned</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#243547;border-radius:2px;display:inline-block;border-top:2px dashed #243547"></span>Adherence %</span>
+        </span>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+        ${yLabels}
+        ${bars}
+        ${adhLine}
+        ${labels}
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+    </svg>`;
 }
 
 function renderTPMPie() {
@@ -259,197 +321,4 @@ function editWCTarget() {
         renderDashboard();
         showToast(`✅ Target set to ${state.wcTarget}%`, 'success');
     }
-}
-
-// ── RELIABILITY TREND CARD ──
-function renderReliabilityTrend() {
-    // Ensure the card exists (inject once)
-    let card = document.getElementById('reliabilityTrendCard');
-    if (!card) {
-        const host = document.getElementById('page-dashboard');
-        const kpiGrid = document.getElementById('kpiGrid');
-        if (!host || !kpiGrid) return;
-        card = document.createElement('div');
-        card.id = 'reliabilityTrendCard';
-        card.className = 'card';
-        card.style.marginTop = '16px';
-        card.style.marginBottom = '16px';
-        // Insert right after kpiGrid
-        kpiGrid.parentNode.insertBefore(card, kpiGrid.nextSibling);
-    }
-
-    const weeks = state.weeks || [];
-    if (weeks.length < 2) {
-        card.innerHTML = `
-            <div class="card-header">
-                <span class="card-title">📈 Reliability Trend</span>
-            </div>
-            <div style="padding:20px;color:#aaa;font-size:13px;text-align:center">
-                Upload at least 2 weeks of SFC data to see reliability trends
-            </div>`;
-        return;
-    }
-
-    // Per-week aggregations from SFC data
-    const availByWk = weeks.map(w => {
-        const rows = (state.oeeData[w] || []).filter(d => +d.oee > 0);
-        if (!rows.length) return null;
-        return rows.reduce((s, d) => s + (+d.avail), 0) / rows.length;
-    });
-    const unplByWk = weeks.map(w => {
-        const rows = state.oeeData[w] || [];
-        return rows.reduce((s, d) => s + (+d.unplanned_h), 0);
-    });
-
-    // MTTR / MTBF can't be broken down per-week without per-week Agility data, so
-    // we show them as current period figures with sparkline of availability derived proxies.
-    // Instead, build sparklines from availability-only trend (proxy for reliability direction)
-    // and unplanned downtime trend.
-
-    // Latest vs previous week deltas
-    const latestAvail = availByWk[availByWk.length - 1];
-    const prevAvail = availByWk.length > 1 ? availByWk[availByWk.length - 2] : null;
-    const deltaAvail = (latestAvail != null && prevAvail != null) ? (latestAvail - prevAvail) : null;
-
-    const latestUnpl = unplByWk[unplByWk.length - 1];
-    const prevUnpl = unplByWk.length > 1 ? unplByWk[unplByWk.length - 2] : null;
-    const deltaUnpl = (latestUnpl != null && prevUnpl != null) ? (latestUnpl - prevUnpl) : null;
-
-    // Arrow helper
-    function arrow(delta, goodDirection /* 'up' or 'down' */) {
-        if (delta === null || Math.abs(delta) < 0.1) return `<span style="color:#888">→</span>`;
-        const isUp = delta > 0;
-        const isGood = (goodDirection === 'up' && isUp) || (goodDirection === 'down' && !isUp);
-        const col = isGood ? '#27ae60' : '#c0392b';
-        const sym = isUp ? '↗' : '↘';
-        return `<span style="color:${col};font-weight:700">${sym} ${Math.abs(delta).toFixed(1)}</span>`;
-    }
-
-    // Big availability chart (SVG line + bars)
-    const target = state.wcTarget || 65;
-    const chartW = 900, chartH = 220, padL = 50, padR = 20, padT = 20, padB = 40;
-    const plotW = chartW - padL - padR;
-    const plotH = chartH - padT - padB;
-    const maxVal = 100;
-    const xStep = weeks.length > 1 ? plotW / (weeks.length - 1) : plotW;
-
-    const pts = availByWk.map((v, i) => {
-        if (v == null) return null;
-        const x = padL + i * xStep;
-        const y = padT + plotH - (v / maxVal) * plotH;
-        return { x, y, v };
-    });
-
-    // Build polyline path (skip nulls gracefully)
-    const lineSegments = [];
-    let current = [];
-    pts.forEach(p => {
-        if (p) current.push(`${p.x},${p.y}`);
-        else { if (current.length > 1) lineSegments.push(current.join(' ')); current = []; }
-    });
-    if (current.length > 1) lineSegments.push(current.join(' '));
-
-    // Y grid lines
-    const yLines = [0, 25, 50, 75, 100].map(v => {
-        const y = padT + plotH - (v / maxVal) * plotH;
-        return `
-            <line x1="${padL}" y1="${y}" x2="${padL + plotW}" y2="${y}" stroke="#eee" stroke-width="1"/>
-            <text x="${padL - 8}" y="${y + 4}" font-size="10" fill="#888" text-anchor="end">${v}%</text>`;
-    }).join('');
-
-    // Target line
-    const targetY = padT + plotH - (target / maxVal) * plotH;
-    const targetLine = `
-        <line x1="${padL}" y1="${targetY}" x2="${padL + plotW}" y2="${targetY}"
-            stroke="#95C11F" stroke-width="2" stroke-dasharray="6,4"/>
-        <text x="${padL + plotW - 4}" y="${targetY - 6}" font-size="10" fill="#6a8c15"
-            font-weight="700" text-anchor="end">Target ${target}%</text>`;
-
-    // X labels (week names)
-    const xLabels = weeks.map((w, i) => {
-        const x = padL + i * xStep;
-        return `<text x="${x}" y="${chartH - 8}" font-size="11" fill="#555"
-                    text-anchor="middle" font-weight="600">${w}</text>`;
-    }).join('');
-
-    // Line + dots
-    const linePath = lineSegments.map(seg =>
-        `<polyline points="${seg}" fill="none" stroke="#243547" stroke-width="2.5" stroke-linejoin="round"/>`
-    ).join('');
-    const dots = pts.filter(Boolean).map(p => {
-        const col = p.v >= target ? '#27ae60' : p.v >= target * 0.9 ? '#e67e22' : '#c0392b';
-        return `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${col}" stroke="#fff" stroke-width="2"/>
-                <text x="${p.x}" y="${p.y - 10}" font-size="10" font-weight="700" fill="${col}"
-                    text-anchor="middle">${p.v.toFixed(1)}%</text>`;
-    }).join('');
-
-    const svg = `
-        <svg viewBox="0 0 ${chartW} ${chartH}" width="100%" preserveAspectRatio="xMidYMid meet">
-            ${yLines}
-            ${targetLine}
-            ${linePath}
-            ${dots}
-            ${xLabels}
-        </svg>`;
-
-    // Mini sparkline helper
-    function miniSpark(vals, col, formatter = v => v.toFixed(1)) {
-        const w = 140, h = 40, pad = 4;
-        const clean = vals.filter(v => v != null);
-        if (clean.length < 2) return `<div style="font-size:11px;color:#888">n/a</div>`;
-        const min = Math.min(...clean);
-        const max = Math.max(...clean);
-        const range = (max - min) || 1;
-        const step = (w - pad * 2) / (vals.length - 1);
-        const pts = vals.map((v, i) => {
-            if (v == null) return null;
-            const x = pad + i * step;
-            const y = pad + (h - pad * 2) - ((v - min) / range) * (h - pad * 2);
-            return `${x},${y}`;
-        }).filter(Boolean).join(' ');
-        return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-            <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/>
-        </svg>`;
-    }
-
-    // Summary tiles (3 small cards beneath chart)
-    const availCol = latestAvail != null && latestAvail >= target ? '#27ae60'
-                   : latestAvail != null && latestAvail >= target * 0.9 ? '#e67e22' : '#c0392b';
-
-    card.innerHTML = `
-        <div class="card-header">
-            <span class="card-title">📈 Reliability Trend — Availability Over Time</span>
-            <span class="card-sub">${weeks.length} weeks of SFC data · target ${target}%</span>
-        </div>
-
-        <div style="padding:8px 4px">${svg}</div>
-
-        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;padding:12px 4px 4px">
-            <div style="border:1px solid #eee;border-radius:10px;padding:10px 14px;background:#fafbfc">
-                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">Availability</div>
-                <div style="font-size:22px;font-weight:800;color:${availCol};margin:2px 0">
-                    ${latestAvail != null ? latestAvail.toFixed(1) + '%' : '—'}
-                    <span style="font-size:12px;margin-left:6px">${arrow(deltaAvail, 'up')}</span>
-                </div>
-                ${miniSpark(availByWk, '#243547')}
-                <div style="font-size:10px;color:#888;margin-top:2px">Latest week vs prior</div>
-            </div>
-            <div style="border:1px solid #eee;border-radius:10px;padding:10px 14px;background:#fafbfc">
-                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">Unplanned Downtime</div>
-                <div style="font-size:22px;font-weight:800;color:#c0392b;margin:2px 0">
-                    ${latestUnpl != null ? fmtH(latestUnpl) : '—'}
-                    <span style="font-size:12px;margin-left:6px">${arrow(deltaUnpl, 'down')}</span>
-                </div>
-                ${miniSpark(unplByWk, '#c0392b')}
-                <div style="font-size:10px;color:#888;margin-top:2px">Lower is better</div>
-            </div>
-            <div style="border:1px solid #eee;border-radius:10px;padding:10px 14px;background:#fafbfc">
-                <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">Weeks of data</div>
-                <div style="font-size:22px;font-weight:800;color:#243547;margin:2px 0">${weeks.length}</div>
-                <div style="font-size:11px;color:#666;margin-top:6px">
-                    ${weeks[0]} → ${weeks[weeks.length-1]}
-                </div>
-                <div style="font-size:10px;color:#888;margin-top:6px">Build trend over more weeks</div>
-            </div>
-        </div>`;
 }
