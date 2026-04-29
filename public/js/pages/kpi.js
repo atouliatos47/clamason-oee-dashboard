@@ -7,6 +7,7 @@ const DEFAULT_TARGETS = {
     maxMTTR: { value: 8, label: 'Max MTTR', unit: 'h' },
     minMTBF: { value: 6, label: 'Min MTBF', unit: 'h' },
     tpmTarget: { value: 6, label: 'TPM Visits per Asset', unit: '' },
+    schedAdherence: { value: 65, label: 'Schedule Adherence', unit: '%' },
 };
 
 function getTargets() {
@@ -154,7 +155,7 @@ function renderKPIBoard() {
         { key: 'maxMTTR', label: 'Equipment MTTR', actual: equipMTTR, unit: 'h', higher: false },
         { key: 'minMTBF', label: 'Equipment MTBF', actual: equipMTBF, unit: 'h', higher: true },
         { key: null, label: 'Equipment MTTF', actual: equipMTBF > 0 ? Math.round((equipMTBF - equipMTTR)*10)/10 : 0, unit: 'h', higher: true, readOnly: true },
-        { key: null, label: 'Schedule Adherence', actual: schedAdherence, unit: '%', higher: true, readOnly: true },
+        { key: 'schedAdherence', label: 'Schedule Adherence', actual: schedAdherence, unit: '%', higher: true },
         { key: 'maxDowntime', label: 'Monthly Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
         { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },
