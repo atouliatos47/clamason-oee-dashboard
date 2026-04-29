@@ -108,10 +108,8 @@ function setAgilityMode(mode) {
         picker.style.display = 'block';
         // Default to current month
         const now = new Date();
-        const monthInput = document.getElementById('agilityMonth');
-        monthInput.min = '2020-01';
-        monthInput.max = `${now.getFullYear() + 1}-12`;
-        monthInput.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        document.getElementById('agilityMonth').value =
+            `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     }
 }
 
