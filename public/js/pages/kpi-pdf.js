@@ -218,7 +218,7 @@ ${sectionLabel(`🔧 Maintenance KPIs — ${period} · from Agility + SFC`)}
         ${mRow('Availability %',     avgAvail,            'avail',       '%', true,  fmt1(avgAvail)+'%')}
         ${mRow('Equipment MTTR',         equipMTTR,           'maxMTTR',     'h', false, equipMTTR+'h')}
         ${mRow('Equipment MTBF',         equipMTBF,           'minMTBF',     'h', true,  equipMTBF>0?equipMTBF+'h':'—')}
-        ${mRow('Annual Downtime',    Math.round(totalDT), 'maxDowntime', 'h', false, Math.round(totalDT)+'h')}
+        ${mRow('Monthly Downtime',    Math.round(totalDT), 'maxDowntime', 'h', false, Math.round(totalDT)+'h')}
         ${mRow('Total Breakdowns',   totalBDs,            'maxBDs',      '',  false, String(totalBDs))}
         ${mRow('Avg TPM per Asset',  avgTPM,              'tpmTarget',   '',  true,  fmt1(avgTPM))}
     </tbody>
@@ -237,7 +237,7 @@ ${sectionLabel(`🔧 Maintenance KPIs — ${period} · from Agility + SFC`)}
     </div>
 </div>
 
-${sectionLabel('🔴 Top 5 Assets by Annual Downtime — focus maintenance effort here')}
+${sectionLabel('🔴 Top 5 Assets by Monthly Downtime — focus maintenance effort here')}
 ${top5.map((m,i) => {
     const assetMTTR = +m.breakdown_count > 0
         ? Math.round((+m.downtime_hrs / +m.breakdown_count)*10)/10 : 0;
