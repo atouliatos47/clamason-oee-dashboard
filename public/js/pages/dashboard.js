@@ -117,6 +117,11 @@ function renderDashboard() {
             <div class="kpi-label">Schedule Adherence</div>
             <div class="kpi-value" style="font-size:18px;color:${schedCol}">${schedAdherence}%</div>
             <div class="kpi-sub">run h ÷ net avail h · ${wk || '—'}</div>
+        </div>
+        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
+            <div class="kpi-label">Total Run Hours</div>
+            <div class="kpi-value" style="font-size:18px;color:#27ae60">${Math.round(totalRunH_wk)}h</div>
+            <div class="kpi-sub">all presses · ${wk || '—'}</div>
         </div>`;
 
     // ── TOP 5 DOWNTIME CHART ──
