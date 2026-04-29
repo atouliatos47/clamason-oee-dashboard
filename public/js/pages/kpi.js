@@ -2,7 +2,7 @@
 
 const DEFAULT_TARGETS = {
     avail: { value: 62, label: 'Availability', unit: '%' },
-    maxDowntime: { value: 4500, label: 'Max Annual Downtime', unit: 'h' },
+    maxDowntime: { value: 4500, label: 'Max Monthly Downtime', unit: 'h' },
     maxBDs: { value: 350, label: 'Max Breakdowns', unit: '' },
     maxMTTR: { value: 8, label: 'Max MTTR', unit: 'h' },
     minMTBF: { value: 6, label: 'Min MTBF', unit: 'h' },
@@ -155,7 +155,7 @@ function renderKPIBoard() {
         { key: 'minMTBF', label: 'Equipment MTBF', actual: equipMTBF, unit: 'h', higher: true },
         { key: null, label: 'Equipment MTTF', actual: equipMTBF > 0 ? Math.round((equipMTBF - equipMTTR)*10)/10 : 0, unit: 'h', higher: true, readOnly: true },
         { key: null, label: 'Schedule Adherence', actual: schedAdherence, unit: '%', higher: true, readOnly: true },
-        { key: 'maxDowntime', label: 'Annual Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
+        { key: 'maxDowntime', label: 'Monthly Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
         { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },
     ];
@@ -297,7 +297,7 @@ function renderKPIBoard() {
         <!-- ── SECTION 6: TOP 5 WORST ASSETS ── -->
         <div class="card">
             <div class="card-header">
-                <span class="card-title">🔴 Top 5 Assets by Annual Downtime</span>
+                <span class="card-title">🔴 Top 5 Assets by Monthly Downtime</span>
                 <span class="card-sub">focus maintenance effort here</span>
             </div>
             ${top5.map((m, i) => {

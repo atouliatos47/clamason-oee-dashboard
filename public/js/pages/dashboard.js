@@ -61,7 +61,7 @@ function renderDashboard() {
         </div>
         <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
             onclick="showPage('maintenance')">
-            <div class="kpi-label">Monthly  Downtime</div>
+            <div class="kpi-label">Monthly Downtime</div>
             <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
             <div class="kpi-sub">${period}</div>
         </div>
