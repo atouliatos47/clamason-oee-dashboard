@@ -60,12 +60,12 @@ function renderDashboard() {
             <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'}</div>
         </div>
         <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
-            onclick="showPage('maintenance')">
+            onclick="showPage('maintenance', null, 'maintBarChart')">
             <div class="kpi-label">Monthly Downtime</div>
             <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
             <div class="kpi-sub">${period}</div>
         </div>
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
+        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance', null, 'maintTableBody')">
             <div class="kpi-label">Total Breakdowns</div>
             <div class="kpi-value">${totalBDs}</div>
             <div class="kpi-sub">recorded this period</div>
@@ -87,7 +87,7 @@ function renderDashboard() {
             <div class="kpi-value" style="color:${mttfCol}">${equipMTTF > 0 ? equipMTTF + 'h' : '⚠ ' + equipMTTF + 'h'}</div>
             <div class="kpi-sub">mean time to failure · MTBF − MTTR</div>
         </div>
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance')">
+        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance', null, 'paretoCard')">
             <div class="kpi-label">Labour Cost</div>
             <div class="kpi-value">${fmtK(totalCost)}</div>
             <div class="kpi-sub">annual maintenance labour</div>
@@ -103,7 +103,7 @@ function renderDashboard() {
             <div class="kpi-value" style="font-size:18px;color:${avgOEE >= state.wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
             <div class="kpi-sub">equip avg · ${wk || '—'}</div>
         </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
+        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee', null, 'scheduleChart')">
             <div class="kpi-label">Unplanned Downtime</div>
             <div class="kpi-value" style="font-size:18px;color:#c0392b">${fmtH(totalUnpl)}</div>
             <div class="kpi-sub">all presses this week</div>

@@ -1,6 +1,6 @@
 // app.js - Main application router and initialization
 
-function showPage(page, param = null) {
+function showPage(page, param = null, anchor = null) {
     const currentActive = document.querySelector('.page.active');
     if (currentActive) {
         const currentId = currentActive.id.replace('page-', '');
@@ -30,6 +30,13 @@ function showPage(page, param = null) {
         if (detailPage) detailPage.classList.add('active');
     } else if (page === 'kpi') {
         renderKPIBoard();
+    }
+
+    if (anchor) {
+        setTimeout(() => {
+            const el = document.getElementById(anchor);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     }
 }
 
