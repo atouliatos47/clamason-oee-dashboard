@@ -114,7 +114,7 @@ function parseAgility(buffer) {
       const dt = parseFloat(row[11]) || 0;
       const lh = parseFloat(row[7]) || 0;
       const lc = parseFloat(row[6]) || 0;
-      const isTpm = /tpm|preventive|planned service/i.test(c2) || dt === 0;
+      const isTpm = /tpm|preventive|planned service|routine planned|filter change|oil cooler|service and reseal/i.test(c2);
       if (isTpm) {
         current.tpm_count++;
         current.tpm_jobs.push({
@@ -195,8 +195,8 @@ router.post('/agility', upload.single('file'), async (req, res) => {
             name=EXCLUDED.name, cost_labour=EXCLUDED.cost_labour,
             labour_hrs=EXCLUDED.labour_hrs, num_jobs=EXCLUDED.num_jobs,
             downtime_hrs=EXCLUDED.downtime_hrs, tpm_count=EXCLUDED.tpm_count,
-            breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns,
-            tpm_jobs=EXCLUDED.tpm_jobs, uploaded_at=NOW()
+            breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns, tpm_jobs=EXCLUDED.tpm_jobs,
+            uploaded_at=NOW()
         `, [periodLabel, m.code, m.name, m.cost_labour, m.labour_hrs,
             m.num_jobs, m.downtime_hrs, m.tpm_count, m.breakdown_count,
             JSON.stringify(m.breakdowns), JSON.stringify(m.tpm_jobs)]);
