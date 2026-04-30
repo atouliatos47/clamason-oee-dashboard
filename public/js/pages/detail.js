@@ -452,6 +452,7 @@ function renderDetail(d) {
     } else if (d.type === 'maint') {
         const rawBds = Array.isArray(d.breakdowns) ? d.breakdowns : JSON.parse(d.breakdowns || '[]');
         const bds = groupSimilarBreakdowns(rawBds);
+        const tpmJobs = Array.isArray(d.tpm_jobs) ? d.tpm_jobs : JSON.parse(d.tpm_jobs || '[]');
         const mttr = calcMTTR(d.downtime_hrs, d.breakdown_count);
 
         el.innerHTML = `
@@ -488,7 +489,19 @@ function renderDetail(d) {
                 ${bds.length
                 ? bds.map(b => renderBreakdownCard(b)).join('')
                 : '<p style="color:#aaa;font-size:13px">No breakdown downtime recorded</p>'}
-            </div>`;
+            </div>
+            ${tpmJobs.length ? `
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header"><span class="card-title">✅ PPM History (planned visits)</span></div>
+                ${tpmJobs.map(t => `
+                <div class="breakdown-card" style="border-left-color:#27ae60;">
+                    <div class="bd-hrs" style="color:#27ae60;">PPM</div>
+                    <div class="bd-info">
+                        <div class="bd-desc">${t.desc}</div>
+                        <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h &nbsp;·&nbsp; Cost: ${fmtK(t.cost_labour)}</div>
+                    </div>
+                </div>`).join('')}
+            </div>` : ''}`;
     }
 }
 
