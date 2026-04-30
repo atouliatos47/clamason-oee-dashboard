@@ -84,7 +84,7 @@ function renderDetail(d) {
         const agCode = MAPPING[d.machine];
         const ag = agCode ? state.maintData.find(m => m.code === agCode) : null;
         const rawAgBds = ag ? (Array.isArray(ag.breakdowns) ? ag.breakdowns : JSON.parse(ag.breakdowns || '[]')) : [];
-        const agBds = groupSimilarBreakdowns(rawAgBds);
+        const agBds = groupSimilarBreakdowns(rawAgBds.filter(b => +b.downtime_hrs > 0));
 
         el.innerHTML = `
             <div class="detail-header">
@@ -204,7 +204,7 @@ ${(() => {
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><span class="card-title">Breakdown history</span></div>
+                <div class="card-header"><span class="card-title">Breakdown history (unplanned only)</span></div>
                 ${bds.length ? bds.map(b => renderBreakdownCard(b)).join('') : '<p style="color:#aaa;font-size:13px">No breakdown downtime recorded</p>'}
             </div>`;
     }
@@ -321,7 +321,7 @@ function renderDetail(d) {
         const agCode = MAPPING[d.machine];
         const ag = agCode ? state.maintData.find(m => m.code === agCode) : null;
         const rawAgBds = ag ? (Array.isArray(ag.breakdowns) ? ag.breakdowns : JSON.parse(ag.breakdowns || '[]')) : [];
-        const agBds = groupSimilarBreakdowns(rawAgBds);
+        const agBds = groupSimilarBreakdowns(rawAgBds.filter(b => +b.downtime_hrs > 0));
 
         // MTTR / MTBF for this machine
         const machineRunH = state.weeks.reduce((s, w) => {
@@ -458,7 +458,7 @@ function renderDetail(d) {
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><span class="card-title">Breakdown history</span></div>
+                <div class="card-header"><span class="card-title">Breakdown history (unplanned only)</span></div>
                 ${bds.length
                 ? bds.map(b => renderBreakdownCard(b)).join('')
                 : '<p style="color:#aaa;font-size:13px">No breakdown downtime recorded</p>'}
