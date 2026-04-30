@@ -117,6 +117,7 @@ function parseAgility(buffer) {
       const isTpm = /tpm|preventive|planned service/i.test(c2) || dt === 0;
       if (isTpm) {
         current.tpm_count++;
+        current.tpm_jobs.push({ wo: c1, desc: c2.slice(0, 80), labour_hrs: Math.round(lh * 10) / 10, cost_labour: Math.round(lc) });
       } else {
         current.breakdown_count++;
         if (dt > 0) {
