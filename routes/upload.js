@@ -123,8 +123,8 @@ function parseAgility(buffer) {
           cost_labour: Math.round(lc),
         });
       } else {
-        current.breakdown_count++;
         if (dt > 0) {
+          current.breakdown_count++;
           current.breakdowns.push({
             wo: c1, desc: c2.slice(0, 80),
             labour_hrs: Math.round(lh * 10) / 10,
