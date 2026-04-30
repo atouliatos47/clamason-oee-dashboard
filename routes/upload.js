@@ -108,7 +108,7 @@ function parseAgility(buffer) {
         labour_hrs: Math.round((parseFloat(row[7]) || 0) * 10) / 10,
         num_jobs: parseInt(row[10]) || 0,
         downtime_hrs: Math.round((parseFloat(row[11]) || 0) * 10) / 10,
-        tpm_count: 0, breakdown_count: 0, breakdowns: [],
+        tpm_count: 0, breakdown_count: 0, breakdowns: [],tpm_jobs: [],
       };
     } else if (isJobRow && current) {
       const dt = parseFloat(row[11]) || 0;
