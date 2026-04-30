@@ -84,6 +84,7 @@ function renderDetail(d) {
         const agCode = MAPPING[d.machine];
         const ag = agCode ? state.maintData.find(m => m.code === agCode) : null;
         const rawAgBds = ag ? (Array.isArray(ag.breakdowns) ? ag.breakdowns : JSON.parse(ag.breakdowns || '[]')) : [];
+        const agTpmJobs = ag ? (Array.isArray(ag.tpm_jobs) ? ag.tpm_jobs : JSON.parse(ag.tpm_jobs || '[]')) : [];
         const agBds = groupSimilarBreakdowns(rawAgBds.filter(b => +b.downtime_hrs > 0));
 
         el.innerHTML = `
@@ -178,6 +179,18 @@ function renderDetail(d) {
                     </div>`;
                 })()}
                 ${agBds.length ? agBds.map(b => renderBreakdownCard(b)).join('') : '<p style="color:#aaa;font-size:13px">No significant breakdowns recorded</p>'}
+            </div>` : ''}
+            ${agTpmJobs.length ? `
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header"><span class="card-title">✅ PPM History (planned visits)</span></div>
+                ${agTpmJobs.map(t => `
+                <div class="breakdown-card" style="border-left-color:#27ae60;">
+                    <div class="bd-hrs" style="color:#27ae60;">PPM</div>
+                    <div class="bd-info">
+                        <div class="bd-desc">${t.desc}</div>
+                        <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h &nbsp;·&nbsp; Cost: ${fmtK(t.cost_labour)}</div>
+                    </div>
+                </div>`).join('')}
             </div>` : ''}
         `;
     } else if (d.type === 'maint') {
@@ -322,6 +335,7 @@ function renderDetail(d) {
         const ag = agCode ? state.maintData.find(m => m.code === agCode) : null;
         const rawAgBds = ag ? (Array.isArray(ag.breakdowns) ? ag.breakdowns : JSON.parse(ag.breakdowns || '[]')) : [];
         const agBds = groupSimilarBreakdowns(rawAgBds.filter(b => +b.downtime_hrs > 0));
+        const agTpmJobs2 = ag ? (Array.isArray(ag.tpm_jobs) ? ag.tpm_jobs : JSON.parse(ag.tpm_jobs || '[]')) : [];
 
         // MTTR / MTBF for this machine
         const machineRunH = state.weeks.reduce((s, w) => {
@@ -420,6 +434,18 @@ function renderDetail(d) {
                 ${agBds.length
                     ? agBds.map(b => renderBreakdownCard(b)).join('')
                     : '<p style="color:#aaa;font-size:13px">No significant breakdowns recorded</p>'}
+            </div>` : ''}
+            ${agTpmJobs2.length ? `
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header"><span class="card-title">✅ PPM History (planned visits)</span></div>
+                ${agTpmJobs2.map(t => `
+                <div class="breakdown-card" style="border-left-color:#27ae60;">
+                    <div class="bd-hrs" style="color:#27ae60;">PPM</div>
+                    <div class="bd-info">
+                        <div class="bd-desc">${t.desc}</div>
+                        <div class="bd-meta">WO: ${t.wo} &nbsp;·&nbsp; Labour: ${t.labour_hrs}h &nbsp;·&nbsp; Cost: ${fmtK(t.cost_labour)}</div>
+                    </div>
+                </div>`).join('')}
             </div>` : ''}
         `;
 
