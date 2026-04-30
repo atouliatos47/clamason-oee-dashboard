@@ -119,7 +119,7 @@ function parseAgility(buffer) {
         current.tpm_count++;
       } else {
         current.breakdown_count++;
-        if (dt > 0 || lh > 0.3) {
+        if (dt > 0) {
           current.breakdowns.push({
             wo: c1, desc: c2.slice(0, 80),
             labour_hrs: Math.round(lh * 10) / 10,
