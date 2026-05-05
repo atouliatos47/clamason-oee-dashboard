@@ -333,7 +333,7 @@ function renderTrendsInPareto() {
     document.getElementById('paretoCard').innerHTML = `
         <div class="card">
             <div class="card-header">
-                <span class=\"card-title\">${metric === 'trends' ? '📈 Monthly Trends' : '📊 Pareto Analysis'}</span>
+                <span class="card-title">📊 Pareto Analysis</span>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     <button onclick="setParetoMetric('downtime_hrs')" style="padding:5px 12px;border-radius:16px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:700;cursor:pointer">Downtime Hrs</button>
                     <button onclick="setParetoMetric('cost_labour')" style="padding:5px 12px;border-radius:16px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;font-weight:700;cursor:pointer">Labour Cost</button>
