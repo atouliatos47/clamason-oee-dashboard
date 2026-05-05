@@ -168,7 +168,7 @@ function renderPareto() {
     document.getElementById('paretoCard').innerHTML = `
         <div class="card">
             <div class="card-header">
-                <span class=\"card-title\">${metric === 'trends' ? '📈 Monthly Trends' : '📊 Pareto Analysis'}</span>
+                <span class="card-title">📊 Pareto Analysis</span>
                 <div style="display:flex;gap:6px;">
                     ${Object.entries(metrics).map(([k, v]) =>
         `<button onclick="setParetoMetric('${k}')"
