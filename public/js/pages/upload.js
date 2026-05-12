@@ -196,12 +196,72 @@ async function resetDueDate() {
 }
 // ── Load / Save Machine Mapping ───────────────────────────────────────────────
 async function loadMachineMapping() {
+  const statusEl = document.getElementById('mappingStatus');
   try {
     const res  = await fetch('/api/upload/machine-mapping');
     const data = await res.json();
     state.machineMapping = data.mappings || [];
-    showToast('✅ Mappings loaded', 'success');
+
+    const tbody = document.getElementById('machineMappingBody');
+    if (!tbody) return;
+
+    const agilityNames = data.agilityNames || [];
+    const sfcNames     = data.sfcNames || [];
+
+    if (!agilityNames.length) {
+      tbody.innerHTML = `<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">No Agility machines found — upload Agility data first</td></tr>`;
+      return;
+    }
+
+    const sfcOptions = ['<option value="">— not mapped —</option>',
+      ...sfcNames.map(n => `<option value="${n}">${n}</option>`)
+    ].join('');
+
+    tbody.innerHTML = agilityNames.map(ag => {
+      const mapped = state.machineMapping.find(m => m.agility_name === ag)?.sfc_name || '';
+      const opts   = sfcNames.map(n =>
+        `<option value="${n}" ${n === mapped ? 'selected' : ''}>${n}</option>`
+      ).join('');
+      return `<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:10px 14px;font-size:13px;color:#243547;">${ag}</td>
+        <td style="padding:10px 14px;text-align:center;color:#aaa;">→</td>
+        <td style="padding:10px 14px;">
+          <select data-agility="${ag}"
+            style="width:100%;border:1px solid #ddd;border-radius:6px;padding:6px 10px;font-size:13px">
+            <option value="">— not mapped —</option>
+            ${opts}
+          </select>
+        </td>
+      </tr>`;
+    }).join('');
+
+    if (statusEl) { statusEl.textContent = '✅ Loaded'; statusEl.style.color = '#27ae60'; }
   } catch (err) {
-    showToast('❌ Failed to load mappings: ' + err.message, 'error');
+    if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
+  }
+}
+
+async function saveMachineMapping() {
+  const statusEl = document.getElementById('mappingStatus');
+  const selects  = document.querySelectorAll('#machineMappingBody select');
+  const mappings = Array.from(selects).map(s => ({
+    agility_name: s.dataset.agility,
+    sfc_name: s.value || null
+  }));
+  try {
+    const res  = await fetch('/api/upload/machine-mapping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mappings })
+    });
+    const data = await res.json();
+    if (data.success) {
+      state.machineMapping = mappings;
+      if (statusEl) { statusEl.textContent = `✅ Saved ${data.saved} mappings`; statusEl.style.color = '#27ae60'; }
+    } else {
+      if (statusEl) { statusEl.textContent = '❌ ' + (data.error || 'Failed'); statusEl.style.color = '#c0392b'; }
+    }
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
   }
 }
