@@ -85,6 +85,58 @@ function kpiRow(row, targets) {
         <td style="padding:12px 16px;font-size:16px;">${tl.icon} ${tl.label}</td>
     </tr>`;
 }
+function renderTPMTrendCard() {
+    const dd = state.dueDateStats;
+    if (!dd || !dd.months || dd.months.length < 2) return '';
+
+    const months = dd.months;
+    const W = 580, H = 130;
+    const padL = 36, padR = 10, padT = 14, padB = 36;
+    const chartW = W - padL - padR, chartH = H - padT - padB;
+    const n = months.length, xStep = chartW / Math.max(n - 1, 1);
+
+    function xOf(i) { return padL + i * xStep; }
+    function yOf(v) { return padT + chartH - (Math.min(v, 100) / 100) * chartH; }
+
+    // Grid + target line
+    let grid = '';
+    [0, 25, 50, 75, 100].forEach(v => {
+        const y = yOf(v), isT = v === 90;
+        grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${isT?'#c0392b':'#f0f0f0'}" stroke-width="${isT?1.5:1}" stroke-dasharray="${isT?'5,3':''}"/>
+        <text x="${padL-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="${isT?'#c0392b':'#bbb'}" font-weight="${isT?700:400}">${v}%</text>`;
+    });
+
+    // LTM avg line
+    const ltm = dd.ltmAvg;
+    const ltmY = yOf(ltm).toFixed(1);
+    grid += `<line x1="${padL}" y1="${ltmY}" x2="${W-padR}" y2="${ltmY}" stroke="#888" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="${W-padR-2}" y="${+ltmY-3}" text-anchor="end" font-size="8" fill="#888">LTM ${ltm}%</text>`;
+
+    // Data line + dots
+    const pts = months.map((m, i) => ({ x: xOf(i), y: yOf(m.pct), pct: m.pct, label: m.month }));
+    const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const line = `<polyline points="${polyline}" fill="none" stroke="#185FA5" stroke-width="2" stroke-linejoin="round"/>`;
+    const dots = pts.map(p => {
+        const col = p.pct >= 90 ? '#27ae60' : p.pct >= 70 ? '#185FA5' : '#c0392b';
+        return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${col}" stroke="#fff" stroke-width="1.5"/>`;
+    }).join('');
+    const xLabels = pts.map(p =>
+        `<text x="${p.x.toFixed(1)}" y="${H-padB+14}" text-anchor="end" transform="rotate(-35,${p.x.toFixed(1)},${H-padB+14})" font-size="9" fill="#999">${p.label}</text>`
+    ).join('');
+
+    return `
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+            <span class="card-title">📅 TPM Completed to Plan — Monthly Trend</span>
+            <span class="card-sub">target >90% · LTM avg ${ltm}% · current month ${dd.currentMonth}%</span>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+            ${grid}${line}${dots}${xLabels}
+            <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+            <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+        </svg>
+    </div>`;
+}
 
 function renderKPIBoard() {
     const el = document.getElementById('kpiBoard');
@@ -335,6 +387,10 @@ function renderKPIBoard() {
                         <div style="font-size:10px;color:#888;">TPM visits</div>
                     </div>
                 </div>`;
+                
     }).join('')}
+            ${renderTPMTrendCard()}
         </div>`;
+        
+        
 }
