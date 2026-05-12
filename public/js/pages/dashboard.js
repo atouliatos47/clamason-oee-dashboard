@@ -152,6 +152,10 @@ function renderDashboard() {
 
     // ── SCHEDULE ADHERENCE CHART ──
     renderScheduleChart();
+    
+    // ── TPM COMPLETION TREND ──
+    const tpmTrendEl = document.getElementById('tpmTrendCard');
+    if (tpmTrendEl) tpmTrendEl.innerHTML = renderTPMTrendCard();
 
     // ── AVAILABILITY TREND SPARKLINES ──
     const allMachines = [...new Set(
