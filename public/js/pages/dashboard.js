@@ -50,8 +50,8 @@ function renderDashboard() {
     document.getElementById('kpiGrid').innerHTML = `
         <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
             text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;">
-            🔧 Your Numbers — Maintenance
-        </div>
+            
+        </div>🔧 Maintenance
 
         <div class="kpi-card" style="border-left-color:${availCol};cursor:pointer"
             onclick="showPage('kpi')">
@@ -152,7 +152,7 @@ function renderDashboard() {
 
     // ── SCHEDULE ADHERENCE CHART ──
     renderScheduleChart();
-    
+
     // ── TPM COMPLETION TREND ──
     const tpmTrendEl = document.getElementById('tpmTrendCard');
     if (tpmTrendEl) tpmTrendEl.innerHTML = renderTPMTrendCard();

@@ -194,3 +194,14 @@ async function resetDueDate() {
     if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
   }
 }
+// ── Load / Save Machine Mapping ───────────────────────────────────────────────
+async function loadMachineMapping() {
+  try {
+    const res  = await fetch('/api/upload/machine-mapping');
+    const data = await res.json();
+    state.machineMapping = data.mappings || [];
+    showToast('✅ Mappings loaded', 'success');
+  } catch (err) {
+    showToast('❌ Failed to load mappings: ' + err.message, 'error');
+  }
+}
