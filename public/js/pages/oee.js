@@ -173,23 +173,52 @@ function renderOEEPage() {
 }
 
 function renderOEEKPIs() {
-    const wk = state.currentWeek;
-    const data = wk ? (state.oeeData[wk] || []) : [];
-    const active = data.filter(d => +d.net_avail_h > 0);
-    const avgAvail = active.length ? active.reduce((s,d)=>s+ +d.avail,0)/active.length : 0;
-    const avgOEE   = active.length ? active.reduce((s,d)=>s+ +d.oee,0)/active.length : 0;
-    const avgPerf  = active.length ? active.reduce((s,d)=>s+ +d.perf,0)/active.length : 0;
-    const totalUnpl = data.reduce((s,d)=>s+ +d.unplanned_h,0);
-    const wcTarget  = state.wcTarget || 65;
-    const aboveAvail = active.filter(d => +d.avail >= wcTarget).length;
-    const availCol = avgAvail >= wcTarget ? '#27ae60' : avgAvail >= wcTarget*0.95 ? '#e67e22' : '#c0392b';
+    const wcTarget = state.wcTarget || 65;
     const grid = document.getElementById('oeeKpiGrid');
     if (!grid) return;
+
+    let data, label;
+
+    if (oeeQuickFilter === 0) {
+        // All weeks — aggregate
+        const allData = state.weeks.flatMap(w => state.oeeData[w] || []);
+        const machineMap = {};
+        allData.filter(d => +d.net_avail_h > 0).forEach(d => {
+            if (!machineMap[d.machine]) machineMap[d.machine] = { avail:[], oee:[], perf:[], unpl:[] };
+            machineMap[d.machine].avail.push(+d.avail);
+            machineMap[d.machine].oee.push(+d.oee);
+            machineMap[d.machine].perf.push(+d.perf);
+            machineMap[d.machine].unpl.push(+d.unplanned_h);
+        });
+        data = Object.values(machineMap).map(m => ({
+            avail: m.avail.reduce((s,v)=>s+v,0)/m.avail.length,
+            oee:   m.oee.reduce((s,v)=>s+v,0)/m.oee.length,
+            perf:  m.perf.reduce((s,v)=>s+v,0)/m.perf.length,
+            unplanned_h: m.unpl.reduce((s,v)=>s+v,0),
+            net_avail_h: 1,
+        }));
+        label = 'All Weeks (avg)';
+    } else {
+        const visibleWeeks = state.weeks.slice(-oeeQuickFilter);
+        const wk = visibleWeeks.includes(state.currentWeek)
+            ? state.currentWeek : visibleWeeks[visibleWeeks.length-1] || state.currentWeek;
+        data = (state.oeeData[wk] || []);
+        label = wk || '—';
+    }
+
+    const active = data.filter(d => +d.net_avail_h > 0);
+    const avgAvail  = active.length ? active.reduce((s,d)=>s+ +d.avail,0)/active.length : 0;
+    const avgOEE    = active.length ? active.reduce((s,d)=>s+ +d.oee,0)/active.length : 0;
+    const avgPerf   = active.length ? active.reduce((s,d)=>s+ +d.perf,0)/active.length : 0;
+    const totalUnpl = data.reduce((s,d)=>s+ +d.unplanned_h,0);
+    const aboveAvail = active.filter(d => +d.avail >= wcTarget).length;
+    const availCol  = avgAvail >= wcTarget ? '#27ae60' : avgAvail >= wcTarget*0.95 ? '#e67e22' : '#c0392b';
+
     grid.innerHTML = `
         <div class="kpi-card" style="border-left-color:${availCol}">
             <div class="kpi-label">Equipment Avg Availability</div>
             <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
-            <div class="kpi-sub">target ${wcTarget}% · ${wk||'—'}</div>
+            <div class="kpi-sub">target ${wcTarget}% · ${label}</div>
         </div>
         <div class="kpi-card" style="border-left-color:#27ae60">
             <div class="kpi-label">Above Avail Target</div>
@@ -199,12 +228,12 @@ function renderOEEKPIs() {
         <div class="kpi-card" style="border-left-color:#c0392b">
             <div class="kpi-label">Total Unplanned Down</div>
             <div class="kpi-value" style="color:#c0392b">${fmtH(totalUnpl)}</div>
-            <div class="kpi-sub">all presses this week</div>
+            <div class="kpi-sub">all presses · ${label}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Equipment Avg OEE</div>
             <div class="kpi-value" style="color:${avgOEE>=wcTarget?'#27ae60':'#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">active machines · ${wk||'—'}</div>
+            <div class="kpi-sub">active machines · ${label}</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Equipment Avg Performance</div>
