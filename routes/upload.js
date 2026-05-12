@@ -340,13 +340,19 @@ router.post('/due-date', upload.single('file'), async (req, res) => {
           uploaded_at TIMESTAMPTZ DEFAULT NOW()
         )
       `);
-      await client.query('TRUNCATE TABLE due_date_performance RESTART IDENTITY');
-      for (const r of rows) {
+         await client.query('TRUNCATE TABLE due_date_performance RESTART IDENTITY');
+
+      // Batch insert for performance
+      const chunkSize = 100;
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        const values = chunk.map((r, j) => `($${j*2+1}, $${j*2+2})`).join(',');
+        const params = chunk.flatMap(r => [r.due_date, r.comp_date]);
         await client.query(
-          `INSERT INTO due_date_performance (due_date, comp_date) VALUES ($1, $2)`,
-          [r.due_date, r.comp_date]
+          `INSERT INTO due_date_performance (due_date, comp_date) VALUES ${values}`,
+          params
         );
-      }
+      } 
       res.json({ success: true, rows: rows.length });
     } finally { client.release(); }
   } catch (err) {
