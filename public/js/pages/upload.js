@@ -200,25 +200,21 @@ async function loadMachineMapping() {
   try {
     const res  = await fetch('/api/upload/machine-mapping');
     const data = await res.json();
-    state.machineMapping = data.mappings || [];
 
     const tbody = document.getElementById('machineMappingBody');
     if (!tbody) return;
 
     const agilityNames = data.agilityNames || [];
     const sfcNames     = data.sfcNames || [];
+    const mappings     = data.mappings || [];
 
     if (!agilityNames.length) {
       tbody.innerHTML = `<tr><td colspan="3" style="padding:16px;color:#aaa;text-align:center">No Agility machines found — upload Agility data first</td></tr>`;
       return;
     }
 
-    const sfcOptions = ['<option value="">— not mapped —</option>',
-      ...sfcNames.map(n => `<option value="${n}">${n}</option>`)
-    ].join('');
-
     tbody.innerHTML = agilityNames.map(ag => {
-      const mapped = state.machineMapping.find(m => m.agility_name === ag)?.sfc_name || '';
+      const mapped = mappings.find(m => m.agility_name === ag)?.sfc_name || '';
       const opts   = sfcNames.map(n =>
         `<option value="${n}" ${n === mapped ? 'selected' : ''}>${n}</option>`
       ).join('');
@@ -235,6 +231,7 @@ async function loadMachineMapping() {
       </tr>`;
     }).join('');
 
+    state.machineMapping = mappings;
     if (statusEl) { statusEl.textContent = '✅ Loaded'; statusEl.style.color = '#27ae60'; }
   } catch (err) {
     if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
