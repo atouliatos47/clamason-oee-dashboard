@@ -5,6 +5,7 @@ const state = {
     weeks: [],
     oeeData: {},
     maintData: [],
+    dueDateStats: null,
     sortOEECol: 'unplanned_h',
     sortOEEDir: -1,
     sortMaintCol: 'downtime_hrs',
@@ -32,6 +33,14 @@ async function loadAllData() {
             state.maintTrends = trendRes.ok ? await trendRes.json() : [];
         } catch(e) {
             state.maintTrends = [];
+        }
+
+        // Load due date performance stats
+        try {
+            const ddRes = await fetch('/api/upload/due-date-stats');
+            state.dueDateStats = ddRes.ok ? await ddRes.json() : null;
+        } catch(e) {
+            state.dueDateStats = null;
         }
         
         renderDashboard();

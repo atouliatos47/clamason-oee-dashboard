@@ -8,6 +8,7 @@ const DEFAULT_TARGETS = {
     minMTBF: { value: 6, label: 'Min MTBF', unit: 'h' },
     tpmTarget: { value: 6, label: 'TPM Visits per Asset', unit: '' },
     schedAdherence: { value: 65, label: 'Schedule Adherence', unit: '%' },
+    tpmPlanTarget: { value: 90, label: 'TPM Completed to Plan', unit: '%' },
 };
 
 function getTargets() {
@@ -149,6 +150,11 @@ function renderKPIBoard() {
         </div>`;
     }).join('');
 
+// TPM completion to plan % from Due Date Performance
+    const ddStats = state.dueDateStats || {};
+    const tpmPlanPct = ddStats.currentMonth ?? null;
+    const tpmPlanLtm = ddStats.ltmAvg ?? null;
+
     // Maintenance KPI rows
     const maintRows = [
         { key: 'avail', label: 'Availability %', actual: avgAvail, unit: '%', higher: true },
@@ -159,6 +165,9 @@ function renderKPIBoard() {
         { key: 'maxDowntime', label: 'Monthly Downtime', actual: Math.round(totalDT), unit: 'h', higher: false },
         { key: 'maxBDs', label: 'Total Breakdowns', actual: totalBDs, unit: '', higher: false },
         { key: 'tpmTarget', label: 'Avg TPM per Asset', actual: avgTPM, unit: '', higher: true },
+        { key: 'tpmPlanTarget', label: 'TPM Completed to Plan', actual: tpmPlanPct ?? 0, unit: '%', higher: true,
+          display: tpmPlanPct !== null ? fmt1(tpmPlanPct) + '%' : '—',
+          sub: tpmPlanLtm !== null ? `LTM avg: ${fmt1(tpmPlanLtm)}%` : 'Upload Due Date Performance data' },
     ];
 
     const tlAvail = trafficLight(avgAvail, targets.avail.value);

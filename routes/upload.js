@@ -108,20 +108,15 @@ function parseAgility(buffer) {
         labour_hrs: Math.round((parseFloat(row[7]) || 0) * 10) / 10,
         num_jobs: parseInt(row[10]) || 0,
         downtime_hrs: Math.round((parseFloat(row[11]) || 0) * 10) / 10,
-        tpm_count: 0, breakdown_count: 0, breakdowns: [], tpm_jobs: [],
+        tpm_count: 0, breakdown_count: 0, breakdowns: [],
       };
     } else if (isJobRow && current) {
       const dt = parseFloat(row[11]) || 0;
       const lh = parseFloat(row[7]) || 0;
       const lc = parseFloat(row[6]) || 0;
-      const isTpm = /tpm|preventive|planned service|routine planned|filter change|oil cooler|service and reseal/i.test(c2);
+      const isTpm = /tpm|preventive|planned service/i.test(c2) || dt === 0;
       if (isTpm) {
         current.tpm_count++;
-        current.tpm_jobs.push({
-          wo: c1, desc: c2.slice(0, 80),
-          labour_hrs: Math.round(lh * 10) / 10,
-          cost_labour: Math.round(lc),
-        });
       } else {
         current.breakdown_count++;
         if (dt > 0) {
@@ -189,17 +184,17 @@ router.post('/agility', upload.single('file'), async (req, res) => {
         await client.query(`
           INSERT INTO agility_data
             (period_label, code, name, cost_labour, labour_hrs, num_jobs,
-             downtime_hrs, tpm_count, breakdown_count, breakdowns, tpm_jobs)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+             downtime_hrs, tpm_count, breakdown_count, breakdowns)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
           ON CONFLICT (period_label, code) DO UPDATE SET
             name=EXCLUDED.name, cost_labour=EXCLUDED.cost_labour,
             labour_hrs=EXCLUDED.labour_hrs, num_jobs=EXCLUDED.num_jobs,
             downtime_hrs=EXCLUDED.downtime_hrs, tpm_count=EXCLUDED.tpm_count,
-            breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns, tpm_jobs=EXCLUDED.tpm_jobs,
+            breakdown_count=EXCLUDED.breakdown_count, breakdowns=EXCLUDED.breakdowns,
             uploaded_at=NOW()
         `, [periodLabel, m.code, m.name, m.cost_labour, m.labour_hrs,
             m.num_jobs, m.downtime_hrs, m.tpm_count, m.breakdown_count,
-            JSON.stringify(m.breakdowns), JSON.stringify(m.tpm_jobs)]);
+            JSON.stringify(m.breakdowns)]);
         inserted++;
       }
       res.json({ success: true, period: periodLabel, machines: inserted });
@@ -295,6 +290,113 @@ router.post('/reset', async (req, res) => {
       await client.query('TRUNCATE TABLE oee_data RESTART IDENTITY CASCADE');
       await client.query('TRUNCATE TABLE agility_data RESTART IDENTITY CASCADE');
       res.json({ success: true });
+    } finally { client.release(); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ── Parse Due Date Performance XLSX ──────────────────────────────────────────
+function parseDueDatePerformance(buffer) {
+  const wb  = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+  // Find header row (contains 'Due Date' and 'Comp Date')
+  let headerIdx = -1, colDue = -1, colComp = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i].map(c => c ? String(c).toLowerCase().trim() : '');
+    const di  = row.findIndex(c => c.includes('due date'));
+    const ci  = row.findIndex(c => c.includes('comp date') || c.includes('completion date'));
+    if (di >= 0 && ci >= 0) { headerIdx = i; colDue = di; colComp = ci; break; }
+  }
+  if (headerIdx < 0) throw new Error('Could not find Due Date / Comp Date columns');
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < raw.length; i++) {
+    const row     = raw[i];
+    const dueVal  = row[colDue];
+    const compVal = row[colComp];
+    if (!dueVal || !compVal) continue;
+    const due  = dueVal  instanceof Date ? dueVal  : new Date(dueVal);
+    const comp = compVal instanceof Date ? compVal : new Date(compVal);
+    if (isNaN(due) || isNaN(comp)) continue;
+    rows.push({ due_date: due.toISOString(), comp_date: comp.toISOString() });
+  }
+  return rows;
+}
+
+// ── POST /api/upload/due-date ─────────────────────────────────────────────────
+router.post('/due-date', upload.single('file'), async (req, res) => {
+  try {
+    const rows = parseDueDatePerformance(req.file.buffer);
+    if (!rows.length) return res.status(400).json({ error: 'No valid rows found in file' });
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS due_date_performance (
+          id        SERIAL PRIMARY KEY,
+          due_date  TIMESTAMPTZ NOT NULL,
+          comp_date TIMESTAMPTZ NOT NULL,
+          uploaded_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await client.query('TRUNCATE TABLE due_date_performance RESTART IDENTITY');
+      for (const r of rows) {
+        await client.query(
+          `INSERT INTO due_date_performance (due_date, comp_date) VALUES ($1, $2)`,
+          [r.due_date, r.comp_date]
+        );
+      }
+      res.json({ success: true, rows: rows.length });
+    } finally { client.release(); }
+  } catch (err) {
+    console.error('Due date upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/upload/reset-due-date ──────────────────────────────────────────
+router.post('/reset-due-date', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query('TRUNCATE TABLE due_date_performance RESTART IDENTITY');
+      res.json({ success: true });
+    } finally { client.release(); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ── GET /api/upload/due-date-stats ────────────────────────────────────────────
+router.get('/due-date-stats', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS due_date_performance (
+          id SERIAL PRIMARY KEY, due_date TIMESTAMPTZ NOT NULL,
+          comp_date TIMESTAMPTZ NOT NULL, uploaded_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      const result = await client.query(`
+        SELECT
+          TO_CHAR(DATE_TRUNC('month', comp_date), 'Mon YYYY') AS month,
+          DATE_TRUNC('month', comp_date) AS month_date,
+          COUNT(*) AS total,
+          SUM(CASE WHEN comp_date <= due_date THEN 1 ELSE 0 END) AS on_time
+        FROM due_date_performance
+        GROUP BY DATE_TRUNC('month', comp_date)
+        ORDER BY DATE_TRUNC('month', comp_date)
+      `);
+      const months = result.rows.map(r => ({
+        month: r.month,
+        pct: r.total > 0 ? Math.round((r.on_time / r.total) * 1000) / 10 : 0
+      }));
+      const currentMonth = months[months.length - 1]?.pct ?? null;
+      const ltmAvg = months.length
+        ? Math.round(months.reduce((s, m) => s + m.pct, 0) / months.length * 10) / 10
+        : null;
+      res.json({ months, currentMonth, ltmAvg });
     } finally { client.release(); }
   } catch (err) {
     res.status(500).json({ error: err.message });

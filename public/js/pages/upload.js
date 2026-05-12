@@ -147,3 +147,50 @@ async function resetAgility() {
     if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
   }
 }
+// ── Upload Due Date Performance ───────────────────────────────────────────────
+async function uploadDueDate() {
+  const fileInput = document.getElementById('dueDateFile');
+  const statusEl  = document.getElementById('dueDateStatus');
+
+  function setStatus(msg, color) {
+    if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color; }
+  }
+
+  if (!fileInput || !fileInput.files.length) {
+    setStatus('⚠️ Please select a file first.', '#e67e22'); return;
+  }
+
+  setStatus('⏳ Uploading Due Date Performance data...', '#243547');
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+
+  try {
+    const res  = await fetch('/api/upload/due-date', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      setStatus(`✅ Uploaded ${data.rows} records.`, '#27ae60');
+      fileInput.value = '';
+      await loadAllData();
+    } else {
+      setStatus('❌ Error: ' + (data.error || 'Unknown error'), '#c0392b');
+    }
+  } catch (err) {
+    setStatus('❌ Network error: ' + err.message, '#c0392b');
+  }
+}
+
+// ── Reset Due Date ────────────────────────────────────────────────────────────
+async function resetDueDate() {
+  if (!confirm('Reset Due Date Performance data? This cannot be undone.')) return;
+  const statusEl = document.getElementById('dueDateResetStatus');
+  try {
+    const res  = await fetch('/api/upload/reset-due-date', { method: 'POST' });
+    const data = await res.json();
+    if (statusEl) {
+      statusEl.textContent = data.success ? '✅ Due Date data reset.' : '❌ ' + (data.error || 'Failed');
+      statusEl.style.color = data.success ? '#27ae60' : '#c0392b';
+    }
+  } catch (err) {
+    if (statusEl) { statusEl.textContent = '❌ ' + err.message; statusEl.style.color = '#c0392b'; }
+  }
+}
