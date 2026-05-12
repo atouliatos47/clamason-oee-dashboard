@@ -97,7 +97,7 @@ function renderDashboard() {
 
         <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
             text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;margin-top:8px;">
-            📊 Production Context — shared KPI
+            📊 Production 
         </div>
 
         <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
