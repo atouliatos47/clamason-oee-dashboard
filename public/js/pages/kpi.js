@@ -389,7 +389,6 @@ function renderKPIBoard() {
                 </div>`;
                 
     }).join('')}
-            ${renderTPMTrendCard()}
         </div>`;
         
         
