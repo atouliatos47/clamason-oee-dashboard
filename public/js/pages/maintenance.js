@@ -238,9 +238,11 @@ function renderTrendCharts() {
         // Target line for MTTR (8h)
         let targetLine = '';
         if (chart.key === 'mttr') {
-            const ty = padT + chartH - (8/yMax)*chartH;
+            const _t = (() => { try { return JSON.parse(localStorage.getItem('clamason_kpi_targets') || '{}'); } catch { return {}; } })();
+            const mttrT = _t.maxMTTR?.value || 8;
+            const ty = padT + chartH - (mttrT / yMax) * chartH;
             if (ty > padT) targetLine = `<line x1="${padL}" y1="${ty.toFixed(1)}" x2="${W-padR}" y2="${ty.toFixed(1)}" stroke="#c0392b" stroke-width="1.5" stroke-dasharray="4,2"/>
-            <text x="${W-padR-2}" y="${(ty-3).toFixed(1)}" text-anchor="end" font-size="8" fill="#c0392b">T8h</text>`;
+            <text x="${W-padR-2}" y="${(ty-3).toFixed(1)}" text-anchor="end" font-size="8" fill="#c0392b">T${mttrT}h</text>`;
         }
 
         let linePoints = [];
@@ -279,7 +281,7 @@ function renderTrendsInPareto() {
     const charts = [
         { key: 'breakdowns',   label: 'Breakdowns',         color: '#c0392b', unit: '' },
         { key: 'tpm',          label: 'PPM Conducted',       color: '#95C11F', unit: '' },
-        { key: 'mttr',         label: 'Mean Time To Repair', color: '#e67e22', unit: 'h', target: 8 },
+        { key: 'mttr', label: 'Mean Time To Repair', color: '#e67e22', unit: 'h', target: (() => { try { return JSON.parse(localStorage.getItem('clamason_kpi_targets') || '{}')?.maxMTTR?.value || 8; } catch { return 8; } })() },
         { key: 'downtime_hrs', label: 'Total Downtime',      color: '#243547', unit: 'h' },
     ];
 
