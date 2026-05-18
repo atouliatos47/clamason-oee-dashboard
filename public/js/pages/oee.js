@@ -406,26 +406,37 @@ function sortOEE(col) {
     renderOEETable();
 }
 // ── TEEP SECTION ──────────────────────────────────────────────────────────────
-async function loadTEEP() {
+async function loadTEEP(selectedMonth = null) {
     const el = document.getElementById('teepSection');
     if (!el) return;
     el.innerHTML = `<div style="color:#aaa;font-size:12px;padding:8px 0">Loading TEEP data…</div>`;
     try {
-        const rows = await fetch('/api/oee/teep').then(r => r.json());
+        const url = selectedMonth
+            ? `/api/oee/teep?month=${encodeURIComponent(selectedMonth)}`
+            : '/api/oee/teep';
+        const { rows, months, selectedMonth: active } = await fetch(url).then(r => r.json());
+
         if (!rows.length) { el.innerHTML = ''; return; }
 
-        const fleetNet  = rows.reduce((s, r) => s + +r.total_net_hrs, 0);
-        const fleetCal  = rows.reduce((s, r) => s + +r.total_calendar_hrs, 0);
-        const fleetLoad = fleetCal > 0 ? (fleetNet / fleetCal * 100) : 0;
-        const fleetOEE  = rows.reduce((s, r) => s + +r.avg_oee_pct, 0) / rows.length;
-        const fleetTEEP = fleetLoad / 100 * fleetOEE;
+        const fleetNet    = rows.reduce((s, r) => s + +r.total_net_hrs, 0);
+        const fleetCal    = rows.reduce((s, r) => s + +r.total_calendar_hrs, 0);
+        const fleetLoad   = fleetCal > 0 ? (fleetNet / fleetCal * 100) : 0;
+        const fleetOEE    = rows.reduce((s, r) => s + +r.avg_oee_pct, 0) / rows.length;
+        const fleetTEEP   = fleetLoad / 100 * fleetOEE;
+        const currentLabel = active || months[0] || 'Last 4 Weeks';
 
         el.innerHTML = `
-        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:24px">
-            TEEP — Last 4 Weeks
-            <span style="float:right;display:flex;align-items:center;gap:14px;font-size:11px;font-weight:700;color:#243547">
-                <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#95C11F;border-radius:2px;display:inline-block"></span>OEE</span>
-                <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#F5A623;border-radius:2px;display:inline-block"></span>TEEP</span>
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:24px;display:flex;align-items:center;justify-content:space-between">
+            <span>TEEP — ${currentLabel}</span>
+            <span style="display:flex;align-items:center;gap:12px">
+                <select onchange="loadTEEP(this.value || null)"
+                    style="font-size:11px;border:1px solid #ddd;border-radius:6px;padding:3px 8px;color:#243547;cursor:pointer">
+                    ${months.map(m => `<option value="${m}" ${m === currentLabel ? 'selected' : ''}>${m}</option>`).join('')}
+                </select>
+                <span style="display:flex;align-items:center;gap:14px;font-weight:700;color:#243547">
+                    <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#95C11F;border-radius:2px;display:inline-block"></span>OEE</span>
+                    <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#F5A623;border-radius:2px;display:inline-block"></span>TEEP</span>
+                </span>
             </span>
         </div>
         <div style="background:#f8f9fa;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:28px;flex-wrap:wrap;align-items:center;border:1px solid #f0f0f0">
@@ -439,19 +450,19 @@ async function loadTEEP() {
             </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
-        ${rows.map(r => `
-        <div style="background:#fff;border-radius:10px;padding:10px 8px 6px;
-            box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid #f0f0f0">
-            <div style="font-size:11px;font-weight:700;color:#243547;text-align:center;
-                margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                ${r.machine_name}
-            </div>
-            ${drawSemiGauge(r.teep_pct, 25, 'TEEP', 130, 88)}
-            <div style="display:flex;justify-content:space-between;padding:4px 6px 0;font-size:10px">
-                <span style="color:#888">OEE <span style="color:#95C11F;font-weight:700">${fmt1(r.avg_oee_pct)}%</span></span>
-                <span style="color:#888">Load <span style="color:#243547;font-weight:700">${fmt1(r.loading_pct)}%</span></span>
-            </div>
-        </div>`).join('')}
+            ${rows.map(r => `
+            <div style="background:#fff;border-radius:10px;padding:10px 8px 6px;
+                box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid #f0f0f0">
+                <div style="font-size:11px;font-weight:700;color:#243547;text-align:center;
+                    margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                    ${r.machine_name}
+                </div>
+                ${drawSemiGauge(r.teep_pct, 25, 'TEEP', 130, 88)}
+                <div style="display:flex;justify-content:space-between;padding:4px 6px 0;font-size:10px">
+                    <span style="color:#888">OEE <span style="color:#95C11F;font-weight:700">${fmt1(r.avg_oee_pct)}%</span></span>
+                    <span style="color:#888">Load <span style="color:#243547;font-weight:700">${fmt1(r.loading_pct)}%</span></span>
+                </div>
+            </div>`).join('')}
         </div>`;
     } catch (e) {
         console.error('TEEP load error:', e);
