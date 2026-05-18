@@ -17,24 +17,46 @@ router.get('/weeks', async (req, res) => {
 // GET TEEP data — must be before /:week wildcard
 router.get('/teep', async (req, res) => {
   try {
+    const { month } = req.query;
+
+    const monthFilter = month
+      ? `AND TO_CHAR(week_start_date, 'Mon YYYY') = $1`
+      : `AND week_start_date >= (
+           SELECT MAX(week_start_date) FROM oee_data
+         ) - INTERVAL '27 days'`;
+
+    const params = month ? [month] : [];
+
     const result = await pool.query(`
       SELECT
-        machine                                                          AS machine_name,
-        COUNT(DISTINCT week_label)                                       AS weeks,
-        ROUND(SUM(net_avail_h)::numeric, 2)                             AS total_net_hrs,
-        ROUND((COUNT(DISTINCT week_label) * 168)::numeric, 2)           AS total_calendar_hrs,
+        machine                                                           AS machine_name,
+        COUNT(DISTINCT week_label)                                        AS weeks,
+        ROUND(SUM(net_avail_h)::numeric, 2)                              AS total_net_hrs,
+        ROUND((COUNT(DISTINCT week_label) * 168)::numeric, 2)            AS total_calendar_hrs,
         ROUND((SUM(net_avail_h) / NULLIF(COUNT(DISTINCT week_label) * 168, 0) * 100)::numeric, 1) AS loading_pct,
-        ROUND(AVG(oee)::numeric, 1)                                     AS avg_oee_pct,
+        ROUND(AVG(oee)::numeric, 1)                                      AS avg_oee_pct,
         ROUND((SUM(net_avail_h) / NULLIF(COUNT(DISTINCT week_label) * 168, 0) * AVG(oee))::numeric, 1) AS teep_pct
       FROM oee_data
-      WHERE week_label IN (
-        SELECT DISTINCT week_label FROM oee_data ORDER BY week_label DESC LIMIT 4
-      )
+      WHERE net_avail_h > 0
+      ${monthFilter}
       GROUP BY machine
-      HAVING SUM(net_avail_h) > 0
       ORDER BY machine
+    `, params);
+
+    const months = await pool.query(`
+      SELECT DISTINCT TO_CHAR(week_start_date, 'Mon YYYY') AS month,
+             MIN(week_start_date) AS month_date
+      FROM oee_data
+      WHERE week_start_date IS NOT NULL
+      GROUP BY TO_CHAR(week_start_date, 'Mon YYYY')
+      ORDER BY MIN(week_start_date) DESC
     `);
-    res.json(result.rows);
+
+    res.json({
+      rows: result.rows,
+      months: months.rows.map(r => r.month),
+      selectedMonth: month || null
+    });
   } catch (err) {
     console.error('TEEP query error:', err);
     res.status(500).json({ error: 'Failed to fetch TEEP data' });
