@@ -322,7 +322,9 @@ function renderOEEVisuals() {
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
         ${renderMachineCards(data, target)}
-    </div>`;
+    </div>
+    <div id="teepSection"></div>`;
+    loadTEEP();
 }
 
 // ── WEEK FILTERS ──────────────────────────────────────────────────────────────
@@ -402,4 +404,63 @@ function sortOEE(col) {
     state.sortOEEDir = state.sortOEECol===col ? state.sortOEEDir*-1 : -1;
     state.sortOEECol = col;
     renderOEETable();
+}
+// ── TEEP SECTION ──────────────────────────────────────────────────────────────
+async function loadTEEP() {
+    const el = document.getElementById('teepSection');
+    if (!el) return;
+    el.innerHTML = `<div style="color:#aaa;font-size:12px;padding:8px 0">Loading TEEP data…</div>`;
+    try {
+        const rows = await fetch('/api/teep').then(r => r.json());
+        if (!rows.length) { el.innerHTML = ''; return; }
+
+        const fleetNet  = rows.reduce((s, r) => s + +r.total_net_hrs, 0);
+        const fleetCal  = rows.reduce((s, r) => s + +r.total_calendar_hrs, 0);
+        const fleetLoad = fleetCal > 0 ? (fleetNet / fleetCal * 100) : 0;
+        const fleetOEE  = rows.reduce((s, r) => s + +r.avg_oee_pct, 0) / rows.length;
+        const fleetTEEP = fleetLoad / 100 * fleetOEE;
+
+        el.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;margin-top:24px">
+            TEEP — Last 4 Weeks
+            <span style="float:right;display:flex;align-items:center;gap:14px;font-size:11px;font-weight:700;color:#243547">
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#95C11F;border-radius:2px;display:inline-block"></span>OEE</span>
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:28px;height:4px;background:#F5A623;border-radius:2px;display:inline-block"></span>TEEP</span>
+            </span>
+        </div>
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:28px;flex-wrap:wrap;align-items:center;border:1px solid #f0f0f0">
+            <div><div style="font-size:11px;color:#888;margin-bottom:2px">Fleet OEE</div><div style="font-size:22px;font-weight:800;color:#95C11F">${fmt1(fleetOEE)}%</div></div>
+            <div style="width:1px;height:36px;background:#e0e0e0"></div>
+            <div><div style="font-size:11px;color:#888;margin-bottom:2px">Fleet Loading</div><div style="font-size:22px;font-weight:800;color:#243547">${fmt1(fleetLoad)}%</div></div>
+            <div style="width:1px;height:36px;background:#e0e0e0"></div>
+            <div><div style="font-size:11px;color:#888;margin-bottom:2px">Fleet TEEP</div><div style="font-size:22px;font-weight:800;color:#F5A623">${fmt1(fleetTEEP)}%</div></div>
+            <div style="flex:1;min-width:180px;font-size:11px;color:#999;line-height:1.6">
+                Of the full 24/7 calendar, machines were scheduled for <strong style="color:#555">${fmt1(fleetLoad)}%</strong> of available time. TEEP reflects true utilisation of total capacity.
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
+            ${rows.map(r => `
+            <div style="background:#fff;border-radius:10px;padding:10px 10px 8px;box-shadow:0 1px 6px rgba(0,0,0,0.07);border:1px solid #f0f0f0">
+                <div style="font-size:11px;font-weight:700;color:#243547;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.machine_name}</div>
+                <div style="font-size:10px;color:#888;margin-bottom:2px;display:flex;justify-content:space-between">
+                    <span>OEE</span><span style="color:#95C11F;font-weight:700">${fmt1(r.avg_oee_pct)}%</span>
+                </div>
+                <div style="height:5px;background:#f0f0f0;border-radius:3px;margin-bottom:6px;overflow:hidden">
+                    <div style="height:100%;width:${Math.min(+r.avg_oee_pct,100)}%;background:#95C11F;border-radius:3px"></div>
+                </div>
+                <div style="font-size:10px;color:#888;margin-bottom:2px;display:flex;justify-content:space-between">
+                    <span>TEEP</span><span style="color:#F5A623;font-weight:700">${fmt1(r.teep_pct)}%</span>
+                </div>
+                <div style="height:5px;background:#f0f0f0;border-radius:3px;margin-bottom:6px;overflow:hidden">
+                    <div style="height:100%;width:${Math.min(+r.teep_pct,100)}%;background:#F5A623;border-radius:3px"></div>
+                </div>
+                <div style="font-size:10px;color:#aaa;display:flex;justify-content:space-between">
+                    <span>Loading (scheduled ÷ 168h)</span><span>${fmt1(r.loading_pct)}%</span>
+                </div>
+            </div>`).join('')}
+        </div>`;
+    } catch (e) {
+        console.error('TEEP load error:', e);
+        el.innerHTML = '';
+    }
 }
