@@ -14,6 +14,31 @@ router.get('/weeks', async (req, res) => {
   }
 });
 
+// GET TEEP data — must be before /:week wildcard
+router.get('/teep', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        machine_name,
+        COUNT(DISTINCT week_start)                          AS weeks,
+        ROUND(SUM(net_avail_hrs)::numeric, 2)               AS total_net_hrs,
+        ROUND(SUM(total_avail_hrs)::numeric, 2)             AS total_calendar_hrs,
+        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * 100)::numeric, 1) AS loading_pct,
+        ROUND(AVG(oee_pct)::numeric, 1)                     AS avg_oee_pct,
+        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * AVG(oee_pct))::numeric, 1) AS teep_pct
+      FROM sfc_oee
+      WHERE week_start >= (SELECT MAX(week_start) FROM sfc_oee) - INTERVAL '27 days'
+      GROUP BY machine_name
+      HAVING SUM(net_avail_hrs) > 0
+      ORDER BY machine_name
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('TEEP query error:', err);
+    res.status(500).json({ error: 'Failed to fetch TEEP data' });
+  }
+});
+
 // GET all data for a specific week
 router.get('/:week', async (req, res) => {
   try {
@@ -54,29 +79,6 @@ router.get('/summary/latest', async (req, res) => {
     res.json({ week, data: data.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-router.get('/teep', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT
-        machine_name,
-        COUNT(DISTINCT week_start)                          AS weeks,
-        ROUND(SUM(net_avail_hrs)::numeric, 2)               AS total_net_hrs,
-        ROUND(SUM(total_avail_hrs)::numeric, 2)             AS total_calendar_hrs,
-        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * 100)::numeric, 1) AS loading_pct,
-        ROUND(AVG(oee_pct)::numeric, 1)                     AS avg_oee_pct,
-        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * AVG(oee_pct))::numeric, 1) AS teep_pct
-      FROM sfc_oee
-      WHERE week_start >= (SELECT MAX(week_start) FROM sfc_oee) - INTERVAL '27 days'
-      GROUP BY machine_name
-      HAVING SUM(net_avail_hrs) > 0
-      ORDER BY machine_name
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('TEEP query error:', err);
-    res.status(500).json({ error: 'Failed to fetch TEEP data' });
   }
 });
 
