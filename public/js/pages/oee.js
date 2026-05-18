@@ -411,7 +411,7 @@ async function loadTEEP() {
     if (!el) return;
     el.innerHTML = `<div style="color:#aaa;font-size:12px;padding:8px 0">Loading TEEP data…</div>`;
     try {
-        const rows = await fetch('/api/teep').then(r => r.json());
+        const rows = await fetch('/api/oee/teep').then(r => r.json());
         if (!rows.length) { el.innerHTML = ''; return; }
 
         const fleetNet  = rows.reduce((s, r) => s + +r.total_net_hrs, 0);
