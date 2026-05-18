@@ -19,18 +19,20 @@ router.get('/teep', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        machine_name,
-        COUNT(DISTINCT week_start)                          AS weeks,
-        ROUND(SUM(net_avail_hrs)::numeric, 2)               AS total_net_hrs,
-        ROUND(SUM(total_avail_hrs)::numeric, 2)             AS total_calendar_hrs,
-        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * 100)::numeric, 1) AS loading_pct,
-        ROUND(AVG(oee_pct)::numeric, 1)                     AS avg_oee_pct,
-        ROUND((SUM(net_avail_hrs) / NULLIF(SUM(total_avail_hrs), 0) * AVG(oee_pct))::numeric, 1) AS teep_pct
-      FROM sfc_oee
-      WHERE week_start >= (SELECT MAX(week_start) FROM sfc_oee) - INTERVAL '27 days'
-      GROUP BY machine_name
-      HAVING SUM(net_avail_hrs) > 0
-      ORDER BY machine_name
+        machine                                                          AS machine_name,
+        COUNT(DISTINCT week_label)                                       AS weeks,
+        ROUND(SUM(net_avail_h)::numeric, 2)                             AS total_net_hrs,
+        ROUND((COUNT(DISTINCT week_label) * 168)::numeric, 2)           AS total_calendar_hrs,
+        ROUND((SUM(net_avail_h) / NULLIF(COUNT(DISTINCT week_label) * 168, 0) * 100)::numeric, 1) AS loading_pct,
+        ROUND(AVG(oee)::numeric, 1)                                     AS avg_oee_pct,
+        ROUND((SUM(net_avail_h) / NULLIF(COUNT(DISTINCT week_label) * 168, 0) * AVG(oee))::numeric, 1) AS teep_pct
+      FROM oee_data
+      WHERE week_label IN (
+        SELECT DISTINCT week_label FROM oee_data ORDER BY week_label DESC LIMIT 4
+      )
+      GROUP BY machine
+      HAVING SUM(net_avail_h) > 0
+      ORDER BY machine
     `);
     res.json(result.rows);
   } catch (err) {
