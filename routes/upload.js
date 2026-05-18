@@ -15,6 +15,7 @@ function parseSFC(buffer) {
   const machines = [];
   let currentMachine = null;
   let machineCol = -1;
+  let weekStartDate = null;
 
   function toHrs(val) {
     if (val === null || val === undefined || val === '') return 0;
@@ -61,6 +62,13 @@ function parseSFC(buffer) {
       }
     }
     if (cell.includes('Machine:')) currentMachine = cell.replace('Machine:', '').trim();
+    if (!weekStartDate && row[machineCol] && String(row[machineCol]).includes('Date Range:')) {
+      const match = String(row[machineCol]).match(/(\d+)\/(\d+)\/(\d{4})/);
+      if (match) {
+        const [, m, d, y] = match;
+         weekStartDate = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+     }
+    }
     if (cell.includes('Sub Totals') && currentMachine) {
       const pd = colMap ? row[colMap.plannedDown] : row[machineCol + 8];
       const na = colMap ? row[colMap.netAvail]    : row[machineCol + 13];
@@ -79,7 +87,7 @@ function parseSFC(buffer) {
       });
     }
   }
-  return machines;
+  return { machines, weekStartDate };
 }
 
 // ── Parse Agility XLSX ────────────────────────────────────────────────────────
@@ -142,7 +150,7 @@ router.post('/sfc', upload.single('file'), async (req, res) => {
   try {
     const weekLabel = req.body.week_label;
     if (!weekLabel) return res.status(400).json({ error: 'week_label is required' });
-    const machines = parseSFC(req.file.buffer);
+    const { machines, weekStartDate } = parseSFC(req.file.buffer);
     if (!machines.length) return res.status(400).json({ error: 'No machine data found in file' });
     const client = await pool.connect();
     try {
@@ -150,16 +158,17 @@ router.post('/sfc', upload.single('file'), async (req, res) => {
       for (const m of machines) {
         await client.query(`
           INSERT INTO oee_data
-            (week_label, machine, planned_down_h, net_avail_h, unplanned_h,
-             run_h, avail, perf, quality, oee, total_parts)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          (week_label, machine, planned_down_h, net_avail_h, unplanned_h,
+             run_h, avail, perf, quality, oee, total_parts, week_start_date)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
           ON CONFLICT (week_label, machine) DO UPDATE SET
             planned_down_h=EXCLUDED.planned_down_h, net_avail_h=EXCLUDED.net_avail_h,
             unplanned_h=EXCLUDED.unplanned_h, run_h=EXCLUDED.run_h,
             avail=EXCLUDED.avail, perf=EXCLUDED.perf, quality=EXCLUDED.quality,
-            oee=EXCLUDED.oee, total_parts=EXCLUDED.total_parts, uploaded_at=NOW()
+            oee=EXCLUDED.oee, total_parts=EXCLUDED.total_parts,
+            week_start_date=EXCLUDED.week_start_date, uploaded_at=NOW()
         `, [weekLabel, m.machine, m.planned_down_h, m.net_avail_h, m.unplanned_h,
-            m.run_h, m.avail, m.perf, m.quality, m.oee, m.total_parts]);
+            m.run_h, m.avail, m.perf, m.quality, m.oee, m.total_parts, weekStartDate]);
         inserted++;
       }
       res.json({ success: true, week: weekLabel, machines: inserted });
