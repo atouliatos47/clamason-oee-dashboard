@@ -439,25 +439,19 @@ async function loadTEEP() {
             </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
-            ${rows.map(r => `
-            <div style="background:#fff;border-radius:10px;padding:10px 10px 8px;box-shadow:0 1px 6px rgba(0,0,0,0.07);border:1px solid #f0f0f0">
-                <div style="font-size:11px;font-weight:700;color:#243547;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.machine_name}</div>
-                <div style="font-size:10px;color:#888;margin-bottom:2px;display:flex;justify-content:space-between">
-                    <span>OEE</span><span style="color:#95C11F;font-weight:700">${fmt1(r.avg_oee_pct)}%</span>
-                </div>
-                <div style="height:5px;background:#f0f0f0;border-radius:3px;margin-bottom:6px;overflow:hidden">
-                    <div style="height:100%;width:${Math.min(+r.avg_oee_pct,100)}%;background:#95C11F;border-radius:3px"></div>
-                </div>
-                <div style="font-size:10px;color:#888;margin-bottom:2px;display:flex;justify-content:space-between">
-                    <span>TEEP</span><span style="color:#F5A623;font-weight:700">${fmt1(r.teep_pct)}%</span>
-                </div>
-                <div style="height:5px;background:#f0f0f0;border-radius:3px;margin-bottom:6px;overflow:hidden">
-                    <div style="height:100%;width:${Math.min(+r.teep_pct,100)}%;background:#F5A623;border-radius:3px"></div>
-                </div>
-                <div style="font-size:10px;color:#aaa;display:flex;justify-content:space-between">
-                    <span>Loading (scheduled ÷ 168h)</span><span>${fmt1(r.loading_pct)}%</span>
-                </div>
-            </div>`).join('')}
+        ${rows.map(r => `
+        <div style="background:#fff;border-radius:10px;padding:10px 8px 6px;
+            box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid #f0f0f0">
+            <div style="font-size:11px;font-weight:700;color:#243547;text-align:center;
+                margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                ${r.machine_name}
+            </div>
+            ${drawSemiGauge(r.teep_pct, 25, 'TEEP', 130, 88)}
+            <div style="display:flex;justify-content:space-between;padding:4px 6px 0;font-size:10px">
+                <span style="color:#888">OEE <span style="color:#95C11F;font-weight:700">${fmt1(r.avg_oee_pct)}%</span></span>
+                <span style="color:#888">Load <span style="color:#243547;font-weight:700">${fmt1(r.loading_pct)}%</span></span>
+            </div>
+        </div>`).join('')}
         </div>`;
     } catch (e) {
         console.error('TEEP load error:', e);
