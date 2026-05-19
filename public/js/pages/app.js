@@ -30,6 +30,8 @@ function showPage(page, param = null, anchor = null) {
         if (detailPage) detailPage.classList.add('active');
     } else if (page === 'kpi') {
         renderKPIBoard();
+    } else if (page === 'toolroom') {
+        // Toolroom — functionality coming soon
     }
 
     if (anchor) {
