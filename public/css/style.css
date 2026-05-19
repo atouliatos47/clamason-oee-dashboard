@@ -82,7 +82,7 @@ body {
 }
 .kpi-label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.1; }
-.kpi-sub   { font-size: 10px; color: #aaa; margin-top: 2px; }
+.kpi-sub   { font-size: 10px; color: #555; margin-top: 2px; }
 
 /* ── CARDS ── */
 .card {
