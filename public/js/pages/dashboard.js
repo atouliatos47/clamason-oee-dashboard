@@ -38,6 +38,18 @@ function renderDashboard() {
     const avgOEECol  = oc(avgOEE,   state.wcTarget);
     const period     = maint[0]?.period_label || 'Annual';
 
+    // ── Fleet TEEP ──
+    const allMachineSet = new Set(state.weeks.flatMap(w => (state.oeeData[w] || []).map(d => d.machine)));
+    const numMachines   = allMachineSet.size || 1;
+    const totalNetAvailAll = state.weeks.reduce((s, w) =>
+        s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.net_avail_h || 0), 0), 0);
+    const totalCalendarH = numMachines * state.weeks.length * 7 * 24;
+    const fleetLoading   = totalCalendarH > 0 ? totalNetAvailAll / totalCalendarH : 0;
+    const allOEEVals     = state.weeks.flatMap(w => (state.oeeData[w] || []).filter(x => +x.oee > 0).map(x => +x.oee));
+    const allAvgOEE      = allOEEVals.length ? allOEEVals.reduce((a, b) => a + b, 0) / allOEEVals.length : 0;
+    const fleetTEEP      = Math.round(allAvgOEE * fleetLoading * 10) / 10;
+    const teepCol        = fleetTEEP >= 20 ? '#27ae60' : fleetTEEP >= 12 ? '#e67e22' : '#c0392b';
+
     const totalParts   = data.reduce((s, d) => s + (+d.total_parts), 0);
     const totalRunH_wk = data.reduce((s, d) => s + (+d.run_h || 0), 0);
     const totalNetAvail = data.reduce((s, d) => s + (+d.net_avail_h || 0), 0);
@@ -91,7 +103,7 @@ function renderDashboard() {
                 ['MTBF',        equipMTBF > 0 ? equipMTBF + 'h' : '—', mtbfCol],
                 ['MTTR',        equipMTTR + 'h', mttrCol],
                 ['Breakdowns',  totalBDs,         '#c0392b'],
-                ['TEEP',        '—',              '#e67e22'],
+                ['TEEP',        fleetTEEP > 0 ? fleetTEEP + '%' : '—', teepCol],
             ].map(([lbl, val, col]) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;
                     padding:5px 0;border-bottom:0.5px solid #f0f0f0;font-size:11px;">

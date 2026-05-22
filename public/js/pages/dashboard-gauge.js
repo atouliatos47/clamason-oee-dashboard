@@ -31,11 +31,11 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     const ctx = tc.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    const W = rect.width || 360, H = rect.height || 100, pad = 20;
+    const W = rect.width || 360, H = rect.height || 100, pad = 22;
     ctx.clearRect(0, 0, W, H);
 
     if (last6wks.length < 2) {
-        ctx.fillStyle = '#aaa'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#aaa'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
         ctx.fillText('Upload at least 2 weeks of data', W / 2, H / 2);
         return;
     }
@@ -46,23 +46,27 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     [[trendAvail, '#243547'], [trendOEE, '#95C11F']].forEach(([vals, color]) => {
         ctx.beginPath();
         vals.forEach((v, i) => { i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)); });
-        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
         vals.forEach((v, i) => {
-            ctx.beginPath(); ctx.arc(px(i), py(v), 3, 0, Math.PI * 2);
+            ctx.beginPath(); ctx.arc(px(i), py(v), 3.5, 0, Math.PI * 2);
             ctx.fillStyle = color; ctx.fill();
         });
     });
 
+    // Value labels on last point
     const lastOEE   = trendOEE[trendOEE.length - 1];
     const lastAvail = trendAvail[trendAvail.length - 1];
-    ctx.font = '9px Arial'; ctx.textAlign = 'center';
+    ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
     ctx.fillStyle = '#95C11F';
-    ctx.fillText(fmt1(lastOEE) + '%', px(last6wks.length - 1), py(lastOEE) - 6);
+    ctx.fillText(fmt1(lastOEE) + '%', px(last6wks.length - 1), py(lastOEE) - 7);
     ctx.fillStyle = '#243547';
-    ctx.fillText(fmt1(lastAvail) + '%', px(last6wks.length - 1), py(lastAvail) - 6);
+    ctx.fillText(fmt1(lastAvail) + '%', px(last6wks.length - 1), py(lastAvail) - 7);
 
+    // Week labels — bold and readable
     last6wks.forEach((w, i) => {
-        ctx.fillStyle = '#aaa'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
-        ctx.fillText(String(w).replace('Wk ', 'W'), px(i), H - 4);
+        ctx.fillStyle = '#555';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(String(w).replace('Wk ', 'Wk'), px(i), H - 4);
     });
 }
