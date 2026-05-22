@@ -19,7 +19,11 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     const tc = document.getElementById('homeTrend');
     if (!tc) return;
     const ctx = tc.getContext('2d');
-    const W = 360, H = 100, pad = 20;
+    const W = tc.width, H = tc.height, pad = 20;
+    tc.width = tc.offsetWidth * window.devicePixelRatio || 360;
+    tc.height = 100 * window.devicePixelRatio || 100;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    const W = tc.offsetWidth || 360, H = 100, pad = 20;
     ctx.clearRect(0, 0, W, H);
 
     if (last6wks.length < 2) {
