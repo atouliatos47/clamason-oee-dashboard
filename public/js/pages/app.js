@@ -1,6 +1,10 @@
 // app.js - Main application router and initialization
 
 function showPage(page, param = null, anchor = null) {
+    // Redirect old page names to new dept structure
+    if (page === 'oee') { showDept('maintenance', 'oee'); return; }
+    if (page === 'kpi') { showDept('maintenance', 'kpi'); return; }
+
     const currentActive = document.querySelector('.page.active');
     if (currentActive) {
         const currentId = currentActive.id.replace('page-', '');
@@ -20,18 +24,10 @@ function showPage(page, param = null, anchor = null) {
 
     if (page === 'dashboard') {
         renderDashboard();
-    } else if (page === 'oee') {
-        renderOEEPage();
-    } else if (page === 'maintenance') {
-        renderMaintPage();
     } else if (page === 'detail' && param) {
         renderDetail(param);
         const detailPage = document.getElementById('page-detail');
         if (detailPage) detailPage.classList.add('active');
-    } else if (page === 'kpi') {
-        renderKPIBoard();
-    } else if (page === 'toolroom') {
-        // Toolroom — functionality coming soon
     }
 
     if (anchor) {
@@ -39,6 +35,37 @@ function showPage(page, param = null, anchor = null) {
             const el = document.getElementById(anchor);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
+    }
+}
+
+function showDept(dept, sub = null) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const activeNav = document.querySelector(`.nav-item[onclick*="'${dept}'"]`);
+    if (activeNav) activeNav.classList.add('active');
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+    const target = document.getElementById('page-' + dept);
+    if (target) target.classList.add('active');
+
+    const defaultSub = sub || 'oee';
+    showSub(dept, defaultSub);
+}
+
+function showSub(dept, sub) {
+    document.querySelectorAll(`#page-${dept} .sub-page`).forEach(p => p.classList.remove('active'));
+    document.querySelectorAll(`#page-${dept} .sub-tab`).forEach(t => t.classList.remove('active'));
+
+    const activeSub = document.getElementById(`${dept}-${sub}`);
+    const activeSubTab = document.getElementById(`${dept}-tab-${sub}`);
+    if (activeSub) activeSub.classList.add('active');
+    if (activeSubTab) activeSubTab.classList.add('active');
+
+    // Call render functions for maintenance sub-pages
+    if (dept === 'maintenance') {
+        if (sub === 'oee') renderOEEPage();
+        else if (sub === 'maint') renderMaintPage();
+        else if (sub === 'kpi') renderKPIBoard();
     }
 }
 

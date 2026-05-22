@@ -44,6 +44,10 @@
         <span class="nav-icon">📋</span>
         <span class="nav-label">Upload</span>
       </a>
+      <a class="nav-item" onclick="showPage('spares')" href="#">
+       <span class="nav-icon">🔩</span>
+      <span class="nav-label">Critical Spares</span>
+    </a>
 
     </nav>
   </div>
@@ -90,7 +94,16 @@
     </div>
 
     <!-- ═══ PAGE: OEE ═══ -->
-    <div id="page-oee" class="page">
+    <!-- ═══ PAGE: MAINTENANCE DEPT ═══ -->
+    <div id="page-maintenance" class="page">
+      <div class="sub-nav">
+        <div class="sub-tab active" id="maintenance-tab-oee" onclick="showSub('maintenance','oee')">⚙️ OEE &amp; TEEP</div>
+        <div class="sub-tab" id="maintenance-tab-maint" onclick="showSub('maintenance','maint')">🔧 Maintenance</div>
+        <div class="sub-tab" id="maintenance-tab-kpi" onclick="showSub('maintenance','kpi')">🎯 KPI Board</div>
+      </div>
+
+      <!-- OEE sub-page -->
+      <div id="maintenance-oee" class="sub-page active">
       <div class="kpi-grid" id="oeeKpiGrid" style="margin-bottom:16px;"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;" id="quickFilters">
@@ -141,8 +154,10 @@
       </div>
     </div>
 
-    <!-- ═══ PAGE: MAINTENANCE ═══ -->
-    <div id="page-maintenance" class="page">
+      </div>
+
+      <!-- Maintenance sub-page -->
+      <div id="maintenance-maint" class="sub-page">
       <div class="kpi-grid" id="maintKpiGrid"></div>
       <div class="card">
         <div class="card-header">
@@ -187,6 +202,15 @@
       </div>
     </div>
 
+      </div>
+
+      <!-- KPI sub-page -->
+      <div id="maintenance-kpi" class="sub-page">
+        <div id="kpiBoard"></div>
+      </div>
+
+    </div>
+
     <!-- ═══ PAGE: MACHINE DETAIL ═══ -->
     <div id="page-detail" class="page">
       <button class="back-btn" onclick="goBack()">← Back</button>
@@ -194,17 +218,38 @@
     </div>
 
     <!-- ═══ PAGE: KPI BOARD ═══ -->
-    <div id="page-kpi" class="page">
-      <div id="kpiBoard"></div>
+
+    <!-- ═══ PAGE: TOOLROOM DEPT ═══ -->
+    <div id="page-toolroom" class="page">
+      <div class="sub-nav">
+        <div class="sub-tab active" id="toolroom-tab-oee" onclick="showSub('toolroom','oee')">⚙️ OEE &amp; TEEP</div>
+        <div class="sub-tab" id="toolroom-tab-jobs" onclick="showSub('toolroom','jobs')">🔧 Tool Jobs</div>
+        <div class="sub-tab" id="toolroom-tab-kpi" onclick="showSub('toolroom','kpi')">🎯 KPI Board</div>
+      </div>
+      <div id="toolroom-oee" class="sub-page active">
+        <div style="text-align:center;padding:60px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">⚙️</div>
+          <div style="font-size:15px;font-weight:700;color:#7b5ea7;margin-bottom:8px;">OEE &amp; TEEP — Toolroom</div>
+          <div style="font-size:13px;color:#888;">Configure with your Toolroom manager to define machines and data sources.</div>
+        </div>
+      </div>
+      <div id="toolroom-jobs" class="sub-page">
+        <div style="text-align:center;padding:60px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">🔧</div>
+          <div style="font-size:15px;font-weight:700;color:#7b5ea7;margin-bottom:8px;">Tool Jobs — coming soon</div>
+          <div style="font-size:13px;color:#888;">Die changes, tool repairs and turnaround time will appear here.</div>
+        </div>
+      </div>
+      <div id="toolroom-kpi" class="sub-page">
+        <div style="text-align:center;padding:60px 20px;">
+          <div style="font-size:48px;margin-bottom:12px;">🎯</div>
+          <div style="font-size:15px;font-weight:700;color:#7b5ea7;margin-bottom:8px;">KPI Board — Toolroom</div>
+          <div style="font-size:13px;color:#888;">Toolroom targets and actuals will appear here once configured.</div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ PAGE: UPLOAD ═══ -->
-     <div id="page-toolroom" class="page">
-      <div class="page-header">
-        <h1>🔧 Toolroom</h1>
-        <p class="page-subtitle">Toolroom performance — coming soon</p>
-      </div>
-    </div>
     <div id="page-upload" class="page">
       <div class="upload-section">
 
