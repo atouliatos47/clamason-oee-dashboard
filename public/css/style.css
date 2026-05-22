@@ -82,7 +82,7 @@ body {
 }
 .kpi-label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.1; }
-.kpi-sub   { font-size: 10px; color: #555; margin-top: 2px; }
+.kpi-sub   { font-size: 10px; color: #aaa; margin-top: 2px; }
 
 /* ── CARDS ── */
 .card {
@@ -391,3 +391,29 @@ td.name-cell { font-weight: 700; color: var(--navy); }
   .bottom-nav { display: none; }
   /* Side nav for desktop could go here — keeping bottom nav for now for simplicity */
 }
+
+/* ── SUB-NAV TABS ── */
+.sub-nav {
+  display: flex;
+  gap: 4px;
+  padding: 10px 0 0;
+  margin-bottom: 0;
+  border-bottom: 2px solid #e0e0e0;
+}
+.sub-tab {
+  padding: 8px 20px;
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  background: #e8e8e8;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sub-tab:hover { color: #243547; background: #f0f0f0; }
+.sub-tab.active { background: #fff; color: #243547; border-color: #e0e0e0; }
+.sub-page { display: none; padding-top: 16px; }
+.sub-page.active { display: block; }
