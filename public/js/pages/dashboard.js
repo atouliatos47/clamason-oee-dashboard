@@ -1,145 +1,157 @@
-// dashboard.js - Maintenance-first dashboard
+// dashboard.js — Home page orchestrator
+// Depends on: dashboard-gauge.js, dashboard-charts.js
 
 if (!state.wcTarget) state.wcTarget = 65;
 
+function oc(v, target) {
+    return v >= target ? '#27ae60' : v >= target * 0.9 ? '#e67e22' : '#c0392b';
+}
+
 function renderDashboard() {
-    // Read saved targets from localStorage (same source as KPI Board)
+    // ── Targets ──
     const _saved = (() => { try { return JSON.parse(localStorage.getItem('clamason_kpi_targets') || '{}'); } catch { return {}; } })();
     const mttrTarget = _saved.maxMTTR?.value || 8;
     const mtbfTarget = _saved.minMTBF?.value || 6;
 
-    const wk = state.currentWeek;
+    const wk   = state.currentWeek;
     const data = wk ? (state.oeeData[wk] || []) : [];
     const active = data.filter(d => +d.oee > 0);
 
-    // Maintenance KPIs
-    const maint = state.maintData || [];
-    const totalDT = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
+    // ── Maintenance KPIs ──
+    const maint     = state.maintData || [];
+    const totalDT   = maint.reduce((s, m) => s + (+m.downtime_hrs), 0);
     const totalCost = maint.reduce((s, m) => s + (+m.cost_labour), 0);
-    const totalBDs = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
+    const totalBDs  = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
     const totalRunH = state.weeks.reduce((s, w) =>
         s + (state.oeeData[w] || []).reduce((ss, d) => ss + (+d.run_h || 0), 0), 0);
     const equipMTTR = totalBDs > 0 ? Math.round((totalDT / totalBDs) * 10) / 10 : 0;
     const equipMTBF = totalBDs > 0 && totalRunH > 0
         ? Math.round((totalRunH / totalBDs) * 10) / 10 : 0;
-    const mttrCol = equipMTTR <= mttrTarget ? '#27ae60' : equipMTTR <= mttrTarget * 1.5 ? '#e67e22' : '#c0392b';
-    const mtbfCol = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
     const equipMTTF = equipMTBF > 0 ? Math.round((equipMTBF - equipMTTR) * 10) / 10 : 0;
-    const mttfCol = equipMTTF <= 0 ? '#c0392b' : equipMTTF >= mtbfTarget ? '#27ae60' : '#e67e22';
+    const mttrCol   = equipMTTR <= mttrTarget ? '#27ae60' : equipMTTR <= mttrTarget * 1.5 ? '#e67e22' : '#c0392b';
+    const mtbfCol   = equipMTBF >= mtbfTarget ? '#27ae60' : equipMTBF >= mtbfTarget * 0.5 ? '#e67e22' : '#c0392b';
 
-    // Availability from SFC
-    const avgAvail = active.length
-        ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
-    const availCol = avgAvail >= state.wcTarget ? '#27ae60'
-        : avgAvail >= state.wcTarget * 0.95 ? '#e67e22' : '#c0392b';
+    // ── Availability & OEE ──
+    const avgAvail   = active.length ? active.reduce((s, d) => s + (+d.avail), 0) / active.length : 0;
+    const avgOEE     = active.length ? active.reduce((s, d) => s + (+d.oee),   0) / active.length : 0;
+    const availCol   = oc(avgAvail, state.wcTarget);
+    const avgOEECol  = oc(avgOEE,   state.wcTarget);
+    const period     = maint[0]?.period_label || 'Annual';
 
-    // Production context
-    const avgOEE = active.length
-        ? active.reduce((s, d) => s + (+d.oee), 0) / active.length : 0;
-    const totalUnpl = data.reduce((s, d) => s + (+d.unplanned_h), 0);
-    const totalParts = data.reduce((s, d) => s + (+d.total_parts), 0);
-    const period = maint[0]?.period_label || 'Annual';
+    const totalParts   = data.reduce((s, d) => s + (+d.total_parts), 0);
+    const totalRunH_wk = data.reduce((s, d) => s + (+d.run_h || 0), 0);
+    const totalNetAvail = data.reduce((s, d) => s + (+d.net_avail_h || 0), 0);
+    const schedAdherence = totalNetAvail > 0
+        ? Math.round((totalRunH_wk / totalNetAvail) * 1000) / 10 : 0;
 
-    // Schedule Adherence from SFC (current week)
-    const totalRunH_wk  = data.reduce((s, d) => s + (+d.run_h || 0), 0);
-    const totalNetAvail  = data.reduce((s, d) => s + (+d.net_avail_h || 0), 0);
-    const schedAdherence = totalNetAvail > 0 ? Math.round((totalRunH_wk / totalNetAvail) * 1000) / 10 : 0;
-    const schedCol = schedAdherence >= 85 ? '#27ae60' : schedAdherence >= 70 ? '#e67e22' : '#c0392b';
+    // ── Trend data (last 6 weeks) ──
+    const last6wks  = state.weeks.slice(-6);
+    const trendOEE  = last6wks.map(w => {
+        const d = state.oeeData[w] || [];
+        const a = d.filter(x => +x.oee > 0);
+        return a.length ? Math.round(a.reduce((s, x) => s + (+x.oee), 0) / a.length * 10) / 10 : 0;
+    });
+    const trendAvail = last6wks.map(w => {
+        const d = state.oeeData[w] || [];
+        const a = d.filter(x => +x.avail > 0);
+        return a.length ? Math.round(a.reduce((s, x) => s + (+x.avail), 0) / a.length * 10) / 10 : 0;
+    });
 
-    // ── YOUR NUMBERS (Maintenance) ──
-    document.getElementById('kpiGrid').innerHTML = `
-        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
-            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;">
-            🔧 Maintenance
-            
-        </div>
+    // ── Render home layout ──
+    const kpiEl = document.getElementById('kpiGrid');
+    kpiEl.style.display = 'block';
+    kpiEl.innerHTML = `
+    <!-- TOP ROW -->
+    <div style="display:grid;grid-template-columns:190px 1fr 210px;gap:12px;margin-bottom:12px;">
 
-
-        <div class="kpi-card" style="border-left-color:${availCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment Availability</div>
-            <div class="kpi-value" style="color:${availCol}">${fmt1(avgAvail)}%</div>
-            <div class="kpi-sub">target ${state.wcTarget}% · ${wk || '—'}</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:#c0392b;cursor:pointer"
-            onclick="showPage('maintenance', null, 'maintBarChart')">
-            <div class="kpi-label">Monthly Downtime</div>
-            <div class="kpi-value" style="color:#c0392b">${Math.round(totalDT).toLocaleString()}h</div>
-            <div class="kpi-sub">${period}</div>
-        </div>
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance', null, 'maintTableBody')">
-            <div class="kpi-label">Total Breakdowns</div>
-            <div class="kpi-value">${totalBDs}</div>
-            <div class="kpi-sub">recorded this period</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${mttrCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment MTTR</div>
-            <div class="kpi-value" style="color:${mttrCol}">${equipMTTR}h</div>
-            <div class="kpi-sub">target &lt;${mttrTarget}h · mean time to repair</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${mtbfCol};cursor:pointer"
-            onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment MTBF</div>
-            <div class="kpi-value" style="color:${mtbfCol}">${equipMTBF > 0 ? equipMTBF + 'h' : '—'}</div>
-            <div class="kpi-sub">target &gt;${mtbfTarget}h · mean time between failures</div>
-        </div>
-        <div class="kpi-card" style="border-left-color:${mttfCol};cursor:pointer" onclick="showPage('kpi')">
-            <div class="kpi-label">Equipment MTTF</div>
-            <div class="kpi-value" style="color:${mttfCol}">${equipMTTF > 0 ? equipMTTF + 'h' : '⚠ ' + equipMTTF + 'h'}</div>
-            <div class="kpi-sub">mean time to failure · MTBF − MTTR</div>
-        </div>
-        <div class="kpi-card" style="cursor:pointer" onclick="showPage('maintenance', null, 'paretoCard')">
-            <div class="kpi-label">Labour Cost</div>
-            <div class="kpi-value">${fmtK(totalCost)}</div>
-            <div class="kpi-sub">annual maintenance labour</div>
+        <div class="card" style="text-align:center;padding:12px 10px;">
+            <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Fleet OEE</div>
+            <canvas id="gaugeHome" width="160" height="92"></canvas>
+            <div style="font-size:24px;font-weight:700;color:${avgOEECol};margin-top:-8px;">${fmt1(avgOEE)}%</div>
+            <div style="font-size:10px;color:#555;margin-top:2px;">Target ${state.wcTarget}% · ${wk || '—'}</div>
         </div>
 
-        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:#888;
-            text-transform:uppercase;letter-spacing:.5px;margin-bottom:-4px;margin-top:8px;">
-            📊 Production 
+        <div class="card" style="padding:12px 14px;">
+            <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">OEE trend — last 6 weeks</div>
+            <canvas id="homeTrend" width="360" height="100" style="width:100%;height:auto;display:block;"></canvas>
+            <div style="display:flex;gap:14px;margin-top:6px;">
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#555;">
+                    <div style="width:12px;height:3px;background:#95C11F;border-radius:2px;"></div>OEE
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#555;">
+                    <div style="width:12px;height:3px;background:#243547;border-radius:2px;"></div>Availability
+                </div>
+            </div>
         </div>
 
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
-            <div class="kpi-label">Overall OEE</div>
-            <div class="kpi-value" style="font-size:18px;color:${avgOEE >= state.wcTarget ? '#27ae60' : '#c0392b'}">${fmt1(avgOEE)}%</div>
-            <div class="kpi-sub">equip avg · ${wk || '—'}</div>
+        <div class="card" style="padding:12px 14px;">
+            <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Site summary</div>
+            ${[
+                ['Availability', fmt1(avgAvail) + '%', availCol],
+                ['MTBF',        equipMTBF > 0 ? equipMTBF + 'h' : '—', mtbfCol],
+                ['MTTR',        equipMTTR + 'h', mttrCol],
+                ['Breakdowns',  totalBDs,         '#c0392b'],
+                ['TEEP',        '—',              '#e67e22'],
+            ].map(([lbl, val, col]) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:5px 0;border-bottom:0.5px solid #f0f0f0;font-size:11px;">
+                    <span style="color:#444;">${lbl}</span>
+                    <span style="font-weight:700;color:${col};background:${col}15;
+                        padding:2px 8px;border-radius:10px;">${val}</span>
+                </div>`).join('')}
         </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee', null, 'scheduleChart')">
-            <div class="kpi-label">Unplanned Downtime</div>
-            <div class="kpi-value" style="font-size:18px;color:#c0392b">${fmtH(totalUnpl)}</div>
-            <div class="kpi-sub">all presses this week</div>
-        </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
-            <div class="kpi-label">Parts Made</div>
-            <div class="kpi-value" style="font-size:18px">${fmtN(totalParts)}</div>
-            <div class="kpi-sub">total this week</div>
-        </div>
-        <div class="kpi-card" style="background:#f8f9fa;border-left-color:${schedCol};cursor:pointer" onclick="showPage('kpi')">
-            <div class="kpi-label">Schedule Adherence</div>
-            <div class="kpi-value" style="font-size:18px;color:${schedCol}">${schedAdherence}%</div>
-            <div class="kpi-sub">run h ÷ net avail h · ${wk || '—'}</div>
-        </div>
-        <div class="kpi-card" style="background:#f8f9fa;cursor:pointer" onclick="showPage('oee')">
-            <div class="kpi-label">Total Run Hours</div>
-            <div class="kpi-value" style="font-size:18px;color:#27ae60">${Math.round(totalRunH_wk)}h</div>
-            <div class="kpi-sub">all presses · ${wk || '—'}</div>
-        </div>`;
+    </div>
 
-    // ── TOP 5 DOWNTIME CHART ──
+    <!-- DEPT CARDS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+        <div class="card" style="border-top:4px solid #243547;cursor:pointer;padding:14px 16px;"
+            onclick="showDept('maintenance')">
+            <div style="font-size:14px;font-weight:700;color:#243547;margin-bottom:3px;">🔧 Maintenance</div>
+            <div style="font-size:11px;color:#888;margin-bottom:12px;">All production assets · Click to drill in</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+                ${[['OEE', fmt1(avgOEE)+'%', avgOEECol],['MTBF', equipMTBF > 0 ? equipMTBF+'h':'—', mtbfCol],['Avail', fmt1(avgAvail)+'%', availCol]]
+                .map(([l,v,c]) => `<div style="background:#f8f8f8;border-radius:7px;padding:8px;text-align:center;">
+                    <div style="font-size:15px;font-weight:700;color:${c};">${v}</div>
+                    <div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">${l}</div>
+                </div>`).join('')}
+            </div>
+            <div style="font-size:11px;color:#95C11F;font-weight:700;">OEE · Maintenance · KPIs →</div>
+        </div>
+
+        <div class="card" style="border-top:4px solid #7b5ea7;cursor:pointer;padding:14px 16px;"
+            onclick="showDept('toolroom')">
+            <div style="font-size:14px;font-weight:700;color:#7b5ea7;margin-bottom:3px;">⚙️ Toolroom</div>
+            <div style="font-size:11px;color:#888;margin-bottom:12px;">Die maintenance · Tool management · Click to drill in</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+                ${['OEE','MTBF','TEEP'].map(l => `<div style="background:#f8f8f8;border-radius:7px;padding:8px;text-align:center;">
+                    <div style="font-size:15px;font-weight:700;color:#bbb;">—</div>
+                    <div style="font-size:9px;color:#888;text-transform:uppercase;margin-top:2px;">${l}</div>
+                </div>`).join('')}
+            </div>
+            <div style="font-size:11px;color:#7b5ea7;font-weight:700;">OEE · Tool jobs · KPIs →</div>
+        </div>
+    </div>`;
+
+    // ── Draw canvas elements ──
+    setTimeout(() => {
+        const gc = document.getElementById('gaugeHome');
+        if (gc) drawHomeGauge(gc, avgOEE, avgOEECol);
+        drawHomeTrend(last6wks, trendOEE, trendAvail);
+    }, 50);
+
+    // ── Secondary charts ──
     const top5 = [...maint].filter(m => +m.downtime_hrs > 0)
         .sort((a, b) => +b.downtime_hrs - +a.downtime_hrs).slice(0, 5);
     const maxDT = +top5[0]?.downtime_hrs || 1;
-
     document.getElementById('oeeBarChart').innerHTML = top5.length
         ? top5.map(m => {
             const pct = (+m.downtime_hrs / maxDT) * 100;
-            const col = +m.downtime_hrs >= 500 ? '#c0392b'
-                : +m.downtime_hrs >= 200 ? '#e67e22' : '#e6b800';
+            const col = +m.downtime_hrs >= 500 ? '#c0392b' : +m.downtime_hrs >= 200 ? '#e67e22' : '#e6b800';
             return `<div class="bar-row">
                 <div class="bar-machine-name" title="${m.name}">${m.name}</div>
                 <div class="bar-track" style="cursor:pointer"
-                    onclick="showPage('detail',${JSON.stringify({...m, type:'maint'}).replace(/"/g,'&quot;')})">
+                    onclick="showPage('detail',${JSON.stringify({...m,type:'maint'}).replace(/"/g,'&quot;')})">
                     <div class="bar-fill" style="width:${pct}%;background:${col};"></div>
                 </div>
                 <span class="bar-value-out">${Math.round(+m.downtime_hrs)}h</span>
@@ -149,26 +161,19 @@ function renderDashboard() {
 
     document.getElementById('latestWeekLabel').textContent = period;
 
-    // ── TPM PIE ──
     renderTPMPie();
-
-    // ── SCHEDULE ADHERENCE CHART ──
     renderScheduleChart();
 
-    // ── TPM COMPLETION TREND ──
     const tpmTrendEl = document.getElementById('tpmTrendCard');
     if (tpmTrendEl) tpmTrendEl.innerHTML = renderTPMTrendCard();
 
-    // ── AVAILABILITY TREND SPARKLINES ──
+    // ── Availability sparklines ──
     const allMachines = [...new Set(
         state.weeks.flatMap(w => (state.oeeData[w] || []).map(d => d.machine))
     )].sort();
 
-    if (!allMachines.length) {
-        document.getElementById('sparkGrid').innerHTML =
-            emptyState('Upload at least 2 weeks to see trends');
-    } else {
-        document.getElementById('sparkGrid').innerHTML = allMachines.map(m => {
+    document.getElementById('sparkGrid').innerHTML = allMachines.length
+        ? allMachines.map(m => {
             const vals = state.weeks.map(w => {
                 const r = (state.oeeData[w] || []).find(d => d.machine === m);
                 return r ? +r.avail : null;
@@ -176,176 +181,18 @@ function renderDashboard() {
             const bars = state.weeks.map((w, i) => {
                 const v = vals[i];
                 if (v === null) return `<div class="spark-bar" style="flex:1;background:#eee;"></div>`;
-                const col = v >= state.wcTarget ? '#27ae60'
-                    : v >= state.wcTarget * 0.9 ? '#e67e22' : '#c0392b';
-                return `<div class="spark-bar" style="flex:1;height:${Math.max((v / 100) * 36, 1)}px;background:${col};"></div>`;
+                const col = v >= state.wcTarget ? '#27ae60' : v >= state.wcTarget * 0.9 ? '#e67e22' : '#c0392b';
+                return `<div class="spark-bar" style="flex:1;height:${Math.max((v/100)*36,1)}px;background:${col};"></div>`;
             }).join('');
             const latest = vals[vals.length - 1];
             return `<div class="spark-card"
-                onclick="showPage('detail',${JSON.stringify({machine: m, type:'trend'}).replace(/"/g,'&quot;')})">
+                onclick="showPage('detail',${JSON.stringify({machine:m,type:'trend'}).replace(/"/g,'&quot;')})">
                 <div class="spark-name">${m}</div>
                 <div class="spark-bars">${bars}</div>
-                <div class="spark-latest">Avail: <strong>${latest !== null ? fmt1(latest) + '%' : '—'}</strong></div>
+                <div class="spark-latest">Avail: <strong>${latest !== null ? fmt1(latest)+'%' : '—'}</strong></div>
             </div>`;
-        }).join('');
-    }
-}
-
-function renderScheduleChart() {
-    const el = document.getElementById('scheduleChart');
-    if (!el) return;
-
-    const weeks = state.weeks;
-    if (!weeks.length) {
-        el.innerHTML = emptyState('Upload SFC data to see schedule adherence');
-        return;
-    }
-
-    const weekData = weeks.map(w => {
-        const d = state.oeeData[w] || [];
-        const run     = d.reduce((s,x) => s + (+x.run_h||0), 0);
-        const unpl    = d.reduce((s,x) => s + (+x.unplanned_h||0), 0);
-        const netAvail= d.reduce((s,x) => s + (+x.net_avail_h||0), 0);
-        const adh     = netAvail > 0 ? Math.round((run/netAvail)*1000)/10 : 0;
-        return { w, run: Math.round(run), unpl: Math.round(unpl), netAvail: Math.round(netAvail), adh };
-    });
-
-    const maxH = Math.max(...weekData.map(d => d.run + d.unpl), 1);
-    const yMax = Math.ceil(maxH / 50) * 50 || 100;
-    const yTicks = [0, Math.round(yMax*0.25), Math.round(yMax*0.5), Math.round(yMax*0.75), yMax];
-
-    const W = 580, H = 200, padL = 44, padB = 30, padT = 28, padR = 10;
-    const chartH = H - padT - padB, chartW = W - padL - padR;
-    const bw = Math.min(44, chartW / weeks.length - 6);
-    const gap = chartW / weeks.length;
-
-    let bars = '', xLabels = '', adhLine = '', yLabels = '';
-
-    // Y axis
-    yTicks.forEach(v => {
-        const y = padT + chartH - (v/yMax)*chartH;
-        yLabels += `<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#ccc">${v}h</text>`;
-        yLabels += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#f5f5f5" stroke-width="1"/>`;
-    });
-
-    const adh_pts = [];
-    weekData.forEach((d, i) => {
-        const x = padL + i * gap + gap/2;
-        const runH  = Math.max((d.run  / yMax) * chartH, 0);
-        const unplH = Math.max((d.unpl / yMax) * chartH, 0);
-        const baseY = padT + chartH;
-
-        // Bars
-        bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-runH).toFixed(1)}" width="${bw}" height="${runH.toFixed(1)}" fill="#95C11F" rx="2"/>`;
-        bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-runH-unplH).toFixed(1)}" width="${bw}" height="${unplH.toFixed(1)}" fill="#c0392b" rx="2"/>`;
-
-        // Labels inside bars (white)
-        if (runH > 18) bars += `<text x="${x.toFixed(1)}" y="${(baseY - runH/2 + 4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${d.run}h</text>`;
-        if (unplH > 18) bars += `<text x="${x.toFixed(1)}" y="${(baseY - runH - unplH/2 + 4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${d.unpl}h</text>`;
-
-        // Week label
-        const lbl = String(d.w).replace('Wk ','W');
-        xLabels += `<text x="${x.toFixed(1)}" y="${H-padB+14}" text-anchor="middle" font-size="9" fill="#999">${lbl}</text>`;
-
-        adh_pts.push({ x, y: padT + chartH - (d.adh/100)*chartH, adh: d.adh });
-    });
-
-    // Adherence line — draw line first, then dots, then labels above
-    if (adh_pts.length > 1) {
-        adhLine += `<polyline points="${adh_pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="#243547" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>`;
-    }
-    adh_pts.forEach(p => {
-        adhLine += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#243547" stroke="#fff" stroke-width="2"/>`;
-        // Adherence % label — fixed at top of chart (padT - 2) so it never overlaps bars
-        const lblY = padT - 2;
-        adhLine += `<rect x="${(p.x-18).toFixed(1)}" y="${(lblY-11).toFixed(1)}" width="36" height="14" rx="4" fill="#243547"/>`;
-        adhLine += `<text x="${p.x.toFixed(1)}" y="${(lblY).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${p.adh}%</text>`;
-        // Thin vertical guide line from label to dot
-        adhLine += `<line x1="${p.x.toFixed(1)}" y1="${(lblY+3).toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${(p.y-6).toFixed(1)}" stroke="#243547" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>`;
-    });
-
-    el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px">
-            📅 Schedule Adherence — Run Hours vs Unplanned Downtime
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;font-size:11px;font-weight:700;color:#243547">
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:12px;background:#95C11F;border-radius:2px;display:inline-block"></span>Run Hours</span>
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:12px;background:#c0392b;border-radius:2px;display:inline-block"></span>Unplanned</span>
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:2px;background:#243547;border-top:2px dashed #243547;display:inline-block"></span>Adherence %</span>
-        </div>
-    </div>
-    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-        ${yLabels}${bars}${adhLine}${xLabels}
-        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
-        <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
-    </svg>`;
-}
-
-function renderTPMPie() {
-    const el = document.getElementById('tpmPie');
-    if (!el) return;
-
-    const maint = state.maintData || [];
-    const totalTPM      = maint.reduce((s, m) => s + (+m.tpm_count), 0);
-    const totalReactive = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
-    const total = totalTPM + totalReactive;
-
-    if (!total) {
-        el.innerHTML = emptyState('No Agility data yet');
-        return;
-    }
-
-    const tpmPct    = Math.round((totalTPM / total) * 100);
-    const tpmCol    = '#95C11F';
-    const reactCol  = '#c0392b';
-    const statusCol = tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
-    const statusTxt = tpmPct >= 50 ? '✅ Good — TPM leading'
-                    : tpmPct >= 35 ? '⚠️ Improving — push TPM'
-                    : '🔴 Reactive dominated';
-
-    const r = 54, cx = 80, cy = 70, stroke = 22;
-    const circ    = 2 * Math.PI * r;
-    const tpmDash = (totalTPM / total) * circ;
-
-    el.innerHTML = `
-    <div style="display:flex;align-items:center;gap:16px;padding:4px 0;">
-      <svg width="160" height="140" viewBox="0 0 160 140">
-        <circle cx="${cx}" cy="${cy}" r="${r}"
-          fill="none" stroke="${reactCol}" stroke-width="${stroke}"
-          stroke-dasharray="${circ}" stroke-dashoffset="0"
-          transform="rotate(-90 ${cx} ${cy})"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}"
-          fill="none" stroke="${tpmCol}" stroke-width="${stroke}"
-          stroke-dasharray="${tpmDash} ${circ}"
-          stroke-dashoffset="0"
-          transform="rotate(-90 ${cx} ${cy})"/>
-        <text x="${cx}" y="${cy - 8}" text-anchor="middle"
-          font-size="18" font-weight="700" fill="#243547">${tpmPct}%</text>
-        <text x="${cx}" y="${cy + 10}" text-anchor="middle"
-          font-size="10" fill="#888">TPM</text>
-      </svg>
-      <div style="flex:1">
-        <div style="margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="width:12px;height:12px;border-radius:2px;background:${tpmCol};display:inline-block"></span>
-            <span style="font-size:13px;font-weight:700;color:#243547;">Planned TPM</span>
-            <span style="margin-left:auto;font-size:16px;font-weight:700;color:${tpmCol};">${totalTPM}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:12px;height:12px;border-radius:2px;background:${reactCol};display:inline-block"></span>
-            <span style="font-size:13px;font-weight:700;color:#243547;">Reactive Jobs</span>
-            <span style="margin-left:auto;font-size:16px;font-weight:700;color:${reactCol};">${totalReactive}</span>
-          </div>
-        </div>
-        <div style="background:#f8f9fa;border-radius:8px;padding:8px 10px;
-          border-left:3px solid ${statusCol};font-size:12px;
-          font-weight:700;color:${statusCol};">${statusTxt}</div>
-        <div style="font-size:10px;color:#aaa;margin-top:6px;">
-          Target: TPM &gt; Reactive &nbsp;·&nbsp; ${maint[0]?.period_label || ''}
-        </div>
-      </div>
-    </div>`;
+        }).join('')
+        : emptyState('Upload at least 2 weeks to see trends');
 }
 
 function editWCTarget() {

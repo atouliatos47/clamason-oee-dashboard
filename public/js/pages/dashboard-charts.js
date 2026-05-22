@@ -1,0 +1,124 @@
+// dashboard-charts.js — Secondary home page charts
+
+function renderScheduleChart() {
+    const el = document.getElementById('scheduleChart');
+    if (!el) return;
+    const weeks = state.weeks;
+    if (!weeks.length) { el.innerHTML = emptyState('Upload SFC data to see schedule adherence'); return; }
+
+    const weekData = weeks.map(w => {
+        const d = state.oeeData[w] || [];
+        const run      = d.reduce((s, x) => s + (+x.run_h || 0), 0);
+        const unpl     = d.reduce((s, x) => s + (+x.unplanned_h || 0), 0);
+        const netAvail = d.reduce((s, x) => s + (+x.net_avail_h || 0), 0);
+        const adh      = netAvail > 0 ? Math.round((run / netAvail) * 1000) / 10 : 0;
+        return { w, run: Math.round(run), unpl: Math.round(unpl), adh };
+    });
+
+    const maxH = Math.max(...weekData.map(d => d.run + d.unpl), 1);
+    const yMax = Math.ceil(maxH / 50) * 50 || 100;
+    const yTicks = [0, Math.round(yMax * 0.25), Math.round(yMax * 0.5), Math.round(yMax * 0.75), yMax];
+    const W = 580, H = 200, padL = 44, padB = 30, padT = 28, padR = 10;
+    const chartH = H - padT - padB, chartW = W - padL - padR;
+    const bw = Math.min(44, chartW / weeks.length - 6);
+    const gap = chartW / weeks.length;
+    let bars = '', xLabels = '', adhLine = '', yLabels = '';
+
+    yTicks.forEach(v => {
+        const y = padT + chartH - (v / yMax) * chartH;
+        yLabels += `<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#ccc">${v}h</text>`;
+        yLabels += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#f5f5f5" stroke-width="1"/>`;
+    });
+
+    const adh_pts = [];
+    weekData.forEach((d, i) => {
+        const x = padL + i * gap + gap / 2;
+        const runH  = Math.max((d.run  / yMax) * chartH, 0);
+        const unplH = Math.max((d.unpl / yMax) * chartH, 0);
+        const baseY = padT + chartH;
+        bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-runH).toFixed(1)}" width="${bw}" height="${runH.toFixed(1)}" fill="#95C11F" rx="2"/>`;
+        bars += `<rect x="${(x-bw/2).toFixed(1)}" y="${(baseY-runH-unplH).toFixed(1)}" width="${bw}" height="${unplH.toFixed(1)}" fill="#c0392b" rx="2"/>`;
+        if (runH  > 18) bars += `<text x="${x.toFixed(1)}" y="${(baseY-runH/2+4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${d.run}h</text>`;
+        if (unplH > 18) bars += `<text x="${x.toFixed(1)}" y="${(baseY-runH-unplH/2+4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${d.unpl}h</text>`;
+        xLabels += `<text x="${x.toFixed(1)}" y="${H-padB+14}" text-anchor="middle" font-size="9" fill="#999">${String(d.w).replace('Wk ','W')}</text>`;
+        adh_pts.push({ x, y: padT + chartH - (d.adh / 100) * chartH, adh: d.adh });
+    });
+
+    if (adh_pts.length > 1)
+        adhLine += `<polyline points="${adh_pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="#243547" stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>`;
+
+    adh_pts.forEach(p => {
+        adhLine += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#243547" stroke="#fff" stroke-width="2"/>`;
+        const lblY = padT - 2;
+        adhLine += `<rect x="${(p.x-18).toFixed(1)}" y="${(lblY-11).toFixed(1)}" width="36" height="14" rx="4" fill="#243547"/>`;
+        adhLine += `<text x="${p.x.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="middle" font-size="10" fill="#fff" font-weight="800">${p.adh}%</text>`;
+        adhLine += `<line x1="${p.x.toFixed(1)}" y1="${(lblY+3).toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${(p.y-6).toFixed(1)}" stroke="#243547" stroke-width="1" stroke-dasharray="2,2" opacity="0.3"/>`;
+    });
+
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;">
+            📅 Schedule Adherence — Run Hours vs Unplanned Downtime
+        </div>
+        <div style="display:flex;gap:14px;font-size:11px;font-weight:700;color:#243547;">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:12px;background:#95C11F;border-radius:2px;display:inline-block;"></span>Run Hours</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:12px;background:#c0392b;border-radius:2px;display:inline-block;"></span>Unplanned</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:18px;height:2px;background:#243547;border-top:2px dashed;display:inline-block;"></span>Adherence %</span>
+        </div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+        ${yLabels}${bars}${adhLine}${xLabels}
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+        <line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#ddd" stroke-width="1"/>
+    </svg>`;
+}
+
+function renderTPMPie() {
+    const el = document.getElementById('tpmPie');
+    if (!el) return;
+    const maint = state.maintData || [];
+    const totalTPM      = maint.reduce((s, m) => s + (+m.tpm_count), 0);
+    const totalReactive = maint.reduce((s, m) => s + (+m.breakdown_count), 0);
+    const total = totalTPM + totalReactive;
+    if (!total) { el.innerHTML = emptyState('No Agility data yet'); return; }
+
+    const tpmPct    = Math.round((totalTPM / total) * 100);
+    const tpmCol    = '#95C11F', reactCol = '#c0392b';
+    const statusCol = tpmPct >= 50 ? '#27ae60' : tpmPct >= 35 ? '#e67e22' : '#c0392b';
+    const statusTxt = tpmPct >= 50 ? '✅ Good — TPM leading'
+                    : tpmPct >= 35 ? '⚠️ Improving — push TPM' : '🔴 Reactive dominated';
+    const r = 54, cx = 80, cy = 70, stroke = 22;
+    const circ = 2 * Math.PI * r;
+    const tpmDash = (totalTPM / total) * circ;
+
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;padding:4px 0;">
+      <svg width="160" height="140" viewBox="0 0 160 140">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${reactCol}" stroke-width="${stroke}"
+          stroke-dasharray="${circ}" stroke-dashoffset="0" transform="rotate(-90 ${cx} ${cy})"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${tpmCol}" stroke-width="${stroke}"
+          stroke-dasharray="${tpmDash} ${circ}" stroke-dashoffset="0" transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="18" font-weight="700" fill="#243547">${tpmPct}%</text>
+        <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="10" fill="#888">TPM</text>
+      </svg>
+      <div style="flex:1">
+        <div style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="width:12px;height:12px;border-radius:2px;background:${tpmCol};display:inline-block;"></span>
+            <span style="font-size:13px;font-weight:700;color:#243547;">Planned TPM</span>
+            <span style="margin-left:auto;font-size:16px;font-weight:700;color:${tpmCol};">${totalTPM}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:2px;background:${reactCol};display:inline-block;"></span>
+            <span style="font-size:13px;font-weight:700;color:#243547;">Reactive Jobs</span>
+            <span style="margin-left:auto;font-size:16px;font-weight:700;color:${reactCol};">${totalReactive}</span>
+          </div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:8px 10px;border-left:3px solid ${statusCol};
+          font-size:12px;font-weight:700;color:${statusCol};">${statusTxt}</div>
+        <div style="font-size:10px;color:#aaa;margin-top:6px;">
+          Target: TPM &gt; Reactive &nbsp;·&nbsp; ${maint[0]?.period_label || ''}
+        </div>
+      </div>
+    </div>`;
+}
