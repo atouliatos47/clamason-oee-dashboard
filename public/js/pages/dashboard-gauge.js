@@ -1,10 +1,14 @@
 // dashboard-gauge.js — Home page gauge and trend chart helpers
 
 function drawHomeGauge(canvas, pct, color) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.round(rect.width  * dpr) || 160;
+    canvas.height = Math.round(rect.height * dpr) || 92;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width, h = canvas.height;
+    ctx.scale(dpr, dpr);
+    const w = rect.width || 160, h = rect.height || 92;
     const cx = w / 2, cy = h - 10, r = Math.min(w, h * 1.9) / 2 - 10;
-    ctx.clearRect(0, 0, w, h);
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0, false);
     ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.stroke();
     const angle = Math.PI + (Math.min(pct, 100) / 100) * Math.PI;
@@ -18,12 +22,16 @@ function drawHomeGauge(canvas, pct, color) {
 function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     const tc = document.getElementById('homeTrend');
     if (!tc) return;
+
+    const rect = tc.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    tc.width  = Math.round(rect.width  * dpr) || 360;
+    tc.height = Math.round(rect.height * dpr) || 100;
+
     const ctx = tc.getContext('2d');
-    const W = tc.width, H = tc.height, pad = 20;
-    tc.width = tc.offsetWidth * window.devicePixelRatio || 360;
-    tc.height = 100 * window.devicePixelRatio || 100;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    const W = tc.offsetWidth || 360, H = 100, pad = 20;
+    ctx.scale(dpr, dpr);
+
+    const W = rect.width || 360, H = rect.height || 100, pad = 20;
     ctx.clearRect(0, 0, W, H);
 
     if (last6wks.length < 2) {
