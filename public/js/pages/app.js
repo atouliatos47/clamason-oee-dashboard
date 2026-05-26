@@ -17,13 +17,17 @@ function showPage(page, param = null, anchor = null) {
     const activeNav = document.querySelector(`.nav-item[onclick*="'${page}'"]`);
     if (activeNav) activeNav.classList.add('active');
 
+    // Hide all pages AND clear sub-pages when switching top-level pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
 
     const target = document.getElementById('page-' + page);
     if (target) target.classList.add('active');
 
     if (page === 'dashboard') {
         renderDashboard();
+    } else if (page === 'upload') {
+        // Upload page — no render needed, just show it
     } else if (page === 'detail' && param) {
         renderDetail(param);
         const detailPage = document.getElementById('page-detail');
@@ -44,6 +48,7 @@ function showDept(dept, sub = null) {
     if (activeNav) activeNav.classList.add('active');
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
 
     const target = document.getElementById('page-' + dept);
     if (target) target.classList.add('active');
