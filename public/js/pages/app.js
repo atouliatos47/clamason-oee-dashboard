@@ -53,8 +53,8 @@ function showDept(dept, sub = null) {
 }
 
 function showSub(dept, sub) {
-    document.querySelectorAll(`#page-${dept} .sub-page`).forEach(p => p.classList.remove('active'));
-    document.querySelectorAll(`#page-${dept} .sub-tab`).forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
 
     const activeSub = document.getElementById(`${dept}-${sub}`);
     const activeSubTab = document.getElementById(`${dept}-tab-${sub}`);
@@ -81,7 +81,7 @@ async function init() {
             const targets = JSON.parse(saved);
             if (targets?.avail?.value) state.wcTarget = targets.avail.value;
         }
-    } catch(e) {}
+    } catch (e) { }
 
     await loadAllData();
 
@@ -90,7 +90,7 @@ async function init() {
         const res = await fetch('/api/upload/machine-mapping');
         const data = await res.json();
         state.machineMapping = data.mappings || [];
-    } catch(e) {
+    } catch (e) {
         state.machineMapping = [];
     }
 
