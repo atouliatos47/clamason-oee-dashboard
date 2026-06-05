@@ -36,7 +36,12 @@ function renderDashboard() {
     const avgOEE     = active.length ? active.reduce((s, d) => s + (+d.oee),   0) / active.length : 0;
     const availCol   = oc(avgAvail, state.wcTarget);
     const avgOEECol  = oc(avgOEE,   state.wcTarget);
-    const period     = maint[0]?.period_label || 'Annual';
+    // ── Current period (latest month uploaded) ──
+    const periods = [...new Set(maint.map(m => m.period_label).filter(Boolean))].sort();
+    const period  = periods[periods.length - 1] || 'Annual';
+    const maintCurrent = period !== 'Annual'
+        ? maint.filter(m => m.period_label === period)
+        : maint;
 
     // ── Fleet TEEP ──
     const allMachineSet = new Set(state.weeks.flatMap(w => (state.oeeData[w] || []).map(d => d.machine)));
@@ -152,8 +157,8 @@ function renderDashboard() {
         drawHomeTrend(last6wks, trendOEE, trendAvail);
     }, 50);
 
-    // ── Secondary charts ──
-    const top5 = [...maint].filter(m => +m.downtime_hrs > 0)
+    // ── Secondary charts — current period only ──
+    const top5 = [...maintCurrent].filter(m => +m.downtime_hrs > 0)
         .sort((a, b) => +b.downtime_hrs - +a.downtime_hrs).slice(0, 5);
     const maxDT = +top5[0]?.downtime_hrs || 1;
     document.getElementById('oeeBarChart').innerHTML = top5.length
