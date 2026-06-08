@@ -306,27 +306,35 @@ router.post('/reset', async (req, res) => {
 });
 // ── Parse Due Date Performance XLSX ──────────────────────────────────────────
 function parseDueDatePerformance(buffer) {
-  const wb  = XLSX.read(buffer, { type: 'buffer', cellDates: true });
-  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
   // Find header row (contains 'Due Date' and 'Comp Date')
-  let headerIdx = -1, colDue = -1, colComp = -1;
+  let headerIdx = -1, colDue = -1, colComp = -1, colJobType = -1;
   for (let i = 0; i < raw.length; i++) {
     const row = raw[i].map(c => c ? String(c).toLowerCase().trim() : '');
-    const di  = row.findIndex(c => c.includes('due date'));
-    const ci  = row.findIndex(c => c.includes('comp date') || c.includes('completion date'));
-    if (di >= 0 && ci >= 0) { headerIdx = i; colDue = di; colComp = ci; break; }
+    const di = row.findIndex(c => c.includes('due date'));
+    const ci = row.findIndex(c => c.includes('comp date') || c.includes('completion date'));
+    const ji = row.findIndex(c => c.includes('job type'));
+    if (di >= 0 && ci >= 0) { headerIdx = i; colDue = di; colComp = ci; colJobType = ji; break; }
   }
   if (headerIdx < 0) throw new Error('Could not find Due Date / Comp Date columns');
 
   const rows = [];
   for (let i = headerIdx + 1; i < raw.length; i++) {
-    const row     = raw[i];
-    const dueVal  = row[colDue];
+    const row = raw[i];
+    const dueVal = row[colDue];
     const compVal = row[colComp];
     if (!dueVal || !compVal) continue;
-    const due  = dueVal  instanceof Date ? dueVal  : new Date(dueVal);
+
+    // Filter to Planned Service & Maintenance only
+    if (colJobType >= 0) {
+      const jobType = row[colJobType] ? String(row[colJobType]).trim() : '';
+      if (jobType !== 'Planned Service & Maintenance') continue;
+    }
+
+    const due = dueVal instanceof Date ? dueVal : new Date(dueVal);
     const comp = compVal instanceof Date ? compVal : new Date(compVal);
     if (isNaN(due) || isNaN(comp)) continue;
     rows.push({ due_date: due.toISOString(), comp_date: comp.toISOString() });
