@@ -406,7 +406,7 @@ router.get('/due-date-stats', async (req, res) => {
           TO_CHAR(DATE_TRUNC('month', comp_date), 'Mon YYYY') AS month,
           DATE_TRUNC('month', comp_date) AS month_date,
           COUNT(*) AS total,
-          SUM(CASE WHEN comp_date <= due_date THEN 1 ELSE 0 END) AS on_time
+          SUM(CASE WHEN comp_date::date <= due_date::date THEN 1 ELSE 0 END) AS on_time
         FROM due_date_performance
         GROUP BY DATE_TRUNC('month', comp_date)
         ORDER BY DATE_TRUNC('month', comp_date)
