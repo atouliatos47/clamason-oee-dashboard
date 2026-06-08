@@ -160,10 +160,12 @@ function renderDashboard() {
     // ── Secondary charts — current period only ──
     const top5 = [...maintCurrent].filter(m => +m.downtime_hrs > 0)
         .sort((a, b) => +b.downtime_hrs - +a.downtime_hrs).slice(0, 5);
+    const titleEl = document.getElementById('topAssetsTitle');
+    if (titleEl) titleEl.textContent = `🔴 Top ${top5.length} Assets by Downtime`;    
     const maxDT = +top5[0]?.downtime_hrs || 1;
     document.getElementById('oeeBarChart').innerHTML = top5.length
         ? top5.map(m => {
-            const pct = (+m.downtime_hrs / maxDT) * 100;
+            const pct = Math.round(+m.downtime_hrs) === 0 ? 0 : (+m.downtime_hrs / maxDT) * 100;
             const col = +m.downtime_hrs >= 500 ? '#c0392b' : +m.downtime_hrs >= 200 ? '#e67e22' : '#e6b800';
             return `<div class="bar-row">
                 <div class="bar-machine-name" title="${m.name}">${m.name}</div>
