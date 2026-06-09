@@ -2,28 +2,44 @@
 
 function drawHomeGauge(canvas, pct, color) {
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.round(rect.width * dpr) || 160;
-    canvas.height = Math.round(rect.height * dpr) || 100;
+    canvas.width = 160 * dpr;
+    canvas.height = 100 * dpr;
+    canvas.style.width = '160px';
+    canvas.style.height = '100px';
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    const w = rect.width || 160, h = rect.height || 100;
-    const cx = w / 2, cy = h - 8, r = Math.min(w, h * 1.9) / 2 - 8;
+    const w = 160, h = 100;
+    const cx = w / 2, cy = h - 8, r = 62;
 
     // Background arc
-    ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0, false);
-    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI, 0, false);
+    ctx.strokeStyle = '#e8e8e8';
+    ctx.lineWidth = 16;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 
     // Value arc
     const angle = Math.PI + (Math.min(pct, 100) / 100) * Math.PI;
-    ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, angle, false);
-    ctx.strokeStyle = color; ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI, angle, false);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 16;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 
-    // Tick mark at end of arc
-    const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
-    const tx = cx + (r - 10) * Math.cos(angle), ty = cy + (r - 10) * Math.sin(angle);
-    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(nx, ny);
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.stroke();
+    // White tick at end of arc
+    const nx = cx + r * Math.cos(angle);
+    const ny = cy + r * Math.sin(angle);
+    const tx = cx + (r - 12) * Math.cos(angle);
+    const ty = cy + (r - 12) * Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(nx, ny);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 }
 
 function drawHomeTrend(last6wks, trendOEE, trendAvail) {
