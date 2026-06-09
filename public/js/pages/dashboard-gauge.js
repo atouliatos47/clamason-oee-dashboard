@@ -12,18 +12,18 @@ function drawHomeGauge(canvas, pct, color) {
 
     // Background arc
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0, false);
-    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.stroke();
 
     // Value arc
     const angle = Math.PI + (Math.min(pct, 100) / 100) * Math.PI;
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, angle, false);
-    ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.stroke();
 
     // Tick mark at end of arc
     const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
-    const tx = cx + (r - 8) * Math.cos(angle), ty = cy + (r - 8) * Math.sin(angle);
+    const tx = cx + (r - 10) * Math.cos(angle), ty = cy + (r - 10) * Math.sin(angle);
     ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(nx, ny);
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.stroke();
 }
 
 function drawHomeTrend(last6wks, trendOEE, trendAvail) {
