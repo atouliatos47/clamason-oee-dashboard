@@ -72,6 +72,12 @@ function showSub(dept, sub) {
         else if (sub === 'maint') renderMaintPage();
         else if (sub === 'kpi') renderKPIBoard();
     }
+    // Call render functions for toolroom sub-pages
+    if (dept === 'toolroom') {
+        if (sub === 'oee') renderToolroomOEE();
+        else if (sub === 'jobs') renderToolroomJobs();
+        else if (sub === 'kpi') renderToolroomKPI();
+    }
 }
 
 function goBack() {
