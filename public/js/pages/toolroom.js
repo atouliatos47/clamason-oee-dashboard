@@ -172,14 +172,7 @@ function renderToolroomKPI() {
                     </tbody>
                 </table>
             </div>
-            <div class="card" style="padding:16px 20px;border-left:4px solid #7b5ea7;">
-                <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">ℹ️ Note</div>
-                <div style="font-size:13px;color:#555;line-height:1.6;">
-                    Toolroom KPIs will expand as additional data sources are configured.
-                    Current metrics are derived from <strong>Planned Service & Maintenance</strong> jobs in Agility AG3-205.
-                    Future metrics will include tool turnaround time, die change frequency, and toolroom labour utilisation.
-                </div>
-            </div>
+
         </div>`;
 }
 
