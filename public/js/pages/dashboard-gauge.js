@@ -3,20 +3,27 @@
 function drawHomeGauge(canvas, pct, color) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width  = Math.round(rect.width  * dpr) || 160;
-    canvas.height = Math.round(rect.height * dpr) || 92;
+    canvas.width = Math.round(rect.width * dpr) || 160;
+    canvas.height = Math.round(rect.height * dpr) || 100;
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
-    const w = rect.width || 160, h = rect.height || 92;
-    const cx = w / 2, cy = h - 10, r = Math.min(w, h * 1.9) / 2 - 10;
+    const w = rect.width || 160, h = rect.height || 100;
+    const cx = w / 2, cy = h - 8, r = Math.min(w, h * 1.9) / 2 - 8;
+
+    // Background arc
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 0, false);
-    ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+
+    // Value arc
     const angle = Math.PI + (Math.min(pct, 100) / 100) * Math.PI;
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, angle, false);
-    ctx.strokeStyle = color; ctx.lineWidth = 10; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+
+    // Tick mark at end of arc
     const nx = cx + r * Math.cos(angle), ny = cy + r * Math.sin(angle);
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny);
-    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    const tx = cx + (r - 8) * Math.cos(angle), ty = cy + (r - 8) * Math.sin(angle);
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(nx, ny);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
 }
 
 function drawHomeTrend(last6wks, trendOEE, trendAvail) {
@@ -25,7 +32,7 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
 
     const rect = tc.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    tc.width  = Math.round(rect.width  * dpr) || 360;
+    tc.width = Math.round(rect.width * dpr) || 360;
     tc.height = Math.round(rect.height * dpr) || 100;
 
     const ctx = tc.getContext('2d');
@@ -41,7 +48,7 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     }
 
     function px(i) { return pad + i * (W - pad * 2) / (last6wks.length - 1); }
-    function py(v)  { return H - pad - (v - 20) / (100 - 20) * (H - pad * 2); }
+    function py(v) { return H - pad - (v - 20) / (100 - 20) * (H - pad * 2); }
 
     [[trendAvail, '#243547'], [trendOEE, '#95C11F']].forEach(([vals, color]) => {
         ctx.beginPath();
@@ -54,7 +61,7 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     });
 
     // Value labels on last point
-    const lastOEE   = trendOEE[trendOEE.length - 1];
+    const lastOEE = trendOEE[trendOEE.length - 1];
     const lastAvail = trendAvail[trendAvail.length - 1];
     ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center';
     ctx.fillStyle = '#95C11F';
@@ -62,7 +69,7 @@ function drawHomeTrend(last6wks, trendOEE, trendAvail) {
     ctx.fillStyle = '#243547';
     ctx.fillText(fmt1(lastAvail) + '%', px(last6wks.length - 1), py(lastAvail) - 7);
 
-    // Week labels — bold and readable
+    // Week labels
     last6wks.forEach((w, i) => {
         ctx.fillStyle = '#555';
         ctx.font = 'bold 10px Arial';
