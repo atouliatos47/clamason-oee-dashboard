@@ -76,15 +76,12 @@ function renderDashboard() {
     });
 
     // ── Toolroom stats from due date data ──
-    const dd = state.dueDateData || [];
-    const ddCurrent = dd.filter(r => r.period_label === period);
-    const ddCompleted = ddCurrent.length;
-    const ddOnTime = ddCompleted > 0
-        ? Math.round(ddCurrent.filter(r => +r.day <= 0).length / ddCompleted * 100)
-        : null;
-    const ddOverdue = ddCurrent.filter(r => +r.day > 0).length;
+    // ── Toolroom stats from dueDateStats ──
+    const ddStats = state.dueDateStats || {};
+    const ddOnTime = ddStats.currentMonth ?? null;
+    const ddLtm = ddStats.ltmAvg ?? null;
     const ddOnTimeCol = ddOnTime === null ? '#bbb' : ddOnTime >= 90 ? '#27ae60' : ddOnTime >= 70 ? '#e67e22' : '#c0392b';
-    const ddOverdueCol = ddOverdue === 0 ? '#27ae60' : ddOverdue <= 3 ? '#e67e22' : '#c0392b';
+    const ddLtmCol = ddLtm === null ? '#bbb' : ddLtm >= 90 ? '#27ae60' : ddLtm >= 70 ? '#e67e22' : '#c0392b';
 
     // ── Render home layout ──
     const kpiEl = document.getElementById('kpiGrid');
@@ -162,9 +159,9 @@ function renderDashboard() {
             <div style="font-size:11px;color:#888;margin-bottom:12px;">Die maintenance · Tool management · Click to drill in</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
                 ${[
-            ['Jobs Done', ddCompleted > 0 ? ddCompleted : '—', '#7b5ea7'],
-            ['On Time %', ddOnTime !== null ? ddOnTime + '%' : '—', ddOnTimeCol],
-            ['Overdue', ddCompleted > 0 ? ddOverdue : '—', ddOverdueCol],
+            ['On Time %', ddOnTime !== null ? fmt1(ddOnTime) + '%' : '—', ddOnTimeCol],
+            ['LTM Avg', ddLtm !== null ? fmt1(ddLtm) + '%' : '—', ddLtmCol],
+            ['Target', '>90%', '#243547'],
         ].map(([l, v, c]) => `
                     <div style="background:#f8f8f8;border-radius:7px;padding:8px;text-align:center;">
                         <div style="font-size:15px;font-weight:700;color:${c};">${v}</div>
