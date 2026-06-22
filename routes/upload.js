@@ -25,12 +25,15 @@ function parseSFC(buffer) {
       try { return Math.round((parseInt(parts[0]) + parseInt(parts[1]) / 60) * 100) / 100; }
       catch { return 0; }
     }
-    return parseFloat(s) || 0;
+    // Always round to 2dp — raw parseFloat can overflow a fixed NUMERIC column
+    return Math.round((parseFloat(s) || 0) * 100) / 100;
   }
 
   function toNum(val) {
     if (val === null || val === undefined) return 0;
-    return Math.round(parseFloat(val) * 100) / 100 || 0;
+    const n = Math.round(parseFloat(val) * 100) / 100 || 0;
+    // Clamp 0–100: a 100% week overflows NUMERIC(4,2); this also rejects junk values
+    return Math.min(Math.max(n, 0), 100);
   }
 
   for (const row of raw) {
@@ -154,10 +157,23 @@ router.post('/sfc', upload.single('file'), async (req, res) => {
     if (!machines.length) return res.status(400).json({ error: 'No machine data found in file' });
     const client = await pool.connect();
     try {
+      // Widen any columns that are too narrow (e.g. NUMERIC(4,2) can't hold 100.00).
+      // The DO block swallows errors so this is safe even before the table exists.
+      await client.query(`
+        DO $$ BEGIN
+          ALTER TABLE oee_data ALTER COLUMN avail          TYPE NUMERIC(6,2);
+          ALTER TABLE oee_data ALTER COLUMN perf           TYPE NUMERIC(6,2);
+          ALTER TABLE oee_data ALTER COLUMN quality        TYPE NUMERIC(6,2);
+          ALTER TABLE oee_data ALTER COLUMN oee            TYPE NUMERIC(6,2);
+          ALTER TABLE oee_data ALTER COLUMN net_avail_h    TYPE NUMERIC(7,2);
+          ALTER TABLE oee_data ALTER COLUMN planned_down_h TYPE NUMERIC(7,2);
+          ALTER TABLE oee_data ALTER COLUMN unplanned_h    TYPE NUMERIC(7,2);
+          ALTER TABLE oee_data ALTER COLUMN run_h          TYPE NUMERIC(7,2);
+        EXCEPTION WHEN others THEN NULL;
+        END $$
+      `);
       let inserted = 0;
       for (const m of machines) {
-        await client.query(`
-          INSERT INTO oee_data
           (week_label, machine, planned_down_h, net_avail_h, unplanned_h,
              run_h, avail, perf, quality, oee, total_parts, week_start_date)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
