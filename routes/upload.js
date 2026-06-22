@@ -174,6 +174,8 @@ router.post('/sfc', upload.single('file'), async (req, res) => {
       `);
       let inserted = 0;
       for (const m of machines) {
+        await client.query(`
+          INSERT INTO oee_data
           (week_label, machine, planned_down_h, net_avail_h, unplanned_h,
              run_h, avail, perf, quality, oee, total_parts, week_start_date)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
