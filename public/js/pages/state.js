@@ -18,11 +18,11 @@ async function loadAllData() {
     try {
         const res = await fetch('/api/data');
         const data = await res.json();
-        
+
         state.weeks = data.weeks || [];
         state.oeeData = data.oeeData || {};
         state.maintData = data.maintData || [];
-        
+
         if (state.weeks.length > 0) {
             state.currentWeek = state.weeks[state.weeks.length - 1];
         }
@@ -31,7 +31,7 @@ async function loadAllData() {
         try {
             const trendRes = await fetch('/api/maintenance/trends');
             state.maintTrends = trendRes.ok ? await trendRes.json() : [];
-        } catch(e) {
+        } catch (e) {
             state.maintTrends = [];
         }
 
@@ -39,14 +39,10 @@ async function loadAllData() {
         try {
             const ddRes = await fetch('/api/upload/due-date-stats');
             state.dueDateStats = ddRes.ok ? await ddRes.json() : null;
-        } catch(e) {
+        } catch (e) {
             state.dueDateStats = null;
         }
-        
-        renderDashboard();
-        if (document.getElementById('oeeTableBody')) renderOEETable();
-        if (document.getElementById('maintTableBody')) renderMaintPage();
-        
+
     } catch (err) {
         console.error('Failed to load data:', err);
         showToast('Failed to load data', 'error');
